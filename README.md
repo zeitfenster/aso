@@ -29,3 +29,17 @@ npm run preview  # preview the build
 - Detail pane: what it does, sonic character, best uses, and example use cases
 
 Owned vs installed tracking can be added later.
+
+
+## Phone testing
+
+While a Cloud Agent session is running, a temporary public tunnel can be started for iPhone testing.
+
+For a lasting URL, enable GitHub Pages on the `gh-pages` branch:
+
+1. Repo **Settings → Pages**
+2. Source: **Deploy from a branch**
+3. Branch: `gh-pages` / `/ (root)`
+4. Open `https://zeitfenster.github.io/aso/`
+
+The Vite `base` is set to `/aso/` for that Pages URL.
