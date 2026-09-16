@@ -1,0 +1,26 @@
+.hint-anchor {
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.hint-bubble {
+  position: fixed;
+  z-index: 400;
+  box-sizing: border-box;
+  padding: 0.5rem 0.65rem;
+  border: 1px solid var(--line);
+  border-radius: var(--control-radius);
+  background: var(--sheen-fill), var(--bg-elevated);
+  box-shadow: var(--sheen-inset), var(--shadow);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 0.78rem;
+  font-weight: 500;
+  line-height: 1.35;
+  letter-spacing: 0.01em;
+  pointer-events: none;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}

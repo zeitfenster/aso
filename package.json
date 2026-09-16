@@ -1,0 +1,106 @@
+{
+  "name": "aso",
+  "version": "0.1.0",
+  "description": "Personal catalog of licensed audio software and plugins",
+  "main": "electron/main.cjs",
+  "scripts": {
+    "dev": "concurrently -k \"vite\" \"wait-on http://127.0.0.1:5174 && npm run electron:dev\"",
+    "build": "vite build",
+    "electron:dev": "node scripts/launch-electron.cjs --dev",
+    "start": "node scripts/launch-electron.cjs",
+    "preview": "vite build && npm run start",
+    "dist:mac": "npm run build && electron-builder --mac dmg --arm64",
+    "dist:mac:zip": "npm run build && electron-builder --mac zip --arm64",
+    "dist:win": "npm run build && electron-builder --win nsis --x64",
+    "dist:win:dir": "npm run build && electron-builder --win dir --x64"
+  },
+  "author": "Nikos",
+  "license": "MIT",
+  "dependencies": {
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.1.0",
+    "@types/react-dom": "^19.1.0",
+    "@vitejs/plugin-react": "^4.5.2",
+    "concurrently": "^9.1.2",
+    "electron": "^36.4.0",
+    "electron-builder": "^26.15.3",
+    "typescript": "~5.8.3",
+    "vite": "^6.3.5",
+    "wait-on": "^8.0.3"
+  },
+  "build": {
+    "appId": "com.nikos.aso",
+    "productName": "Audio Software Overview",
+    "copyright": "Copyright © Nikos",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "electron/**/*.cjs",
+      "dist/**/*",
+      "assets/aso-mark.png",
+      "package.json"
+    ],
+    "mac": {
+      "icon": "assets/aso-mark.png",
+      "category": "public.app-category.music",
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "arm64"
+          ]
+        },
+        {
+          "target": "zip",
+          "arch": [
+            "arm64"
+          ]
+        }
+      ],
+      "identity": null,
+      "hardenedRuntime": false,
+      "gatekeeperAssess": false
+    },
+    "dmg": {
+      "contents": [
+        {
+          "x": 130,
+          "y": 220
+        },
+        {
+          "x": 410,
+          "y": 220,
+          "type": "link",
+          "path": "/Applications"
+        }
+      ]
+    },
+    "win": {
+      "icon": "assets/aso-mark.png",
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Audio Software Overview"
+    }
+  },
+  "allowScripts": {
+    "electron@36.9.5": true,
+    "esbuild@0.25.12": true,
+    "electron-winstaller@5.4.0": true
+  }
+}

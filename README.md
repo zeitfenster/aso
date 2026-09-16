@@ -1,45 +1,23 @@
 # aso
 
-Audio Software Overview — a filterable catalog of owned audio software and third-party plugins for Ableton Live workflows.
+Personal catalog of licensed audio software and plugins — types, sonic character, and when to reach for each one.
 
-## App
+Desktop app for macOS and Windows, sharing the studio graphite UI from Liveset Analyzer.
 
-The catalog UI lives in [`web/`](web/):
-
-- **Stack:** Vite + React + TypeScript (runs in the browser)
-- **OS:** macOS, Windows, and Linux via Node.js
+## Run locally
 
 ```bash
-cd web
 npm install
 npm run dev
 ```
 
-Then open the local URL Vite prints (usually `http://localhost:5173`).
+This starts Vite and opens the Electron window.
+
+## Package
 
 ```bash
-npm run build    # production build
-npm run preview  # preview the build
+npm run dist:mac      # arm64 dmg + zip
+npm run dist:win      # x64 NSIS installer
 ```
 
-## Features
-
-- Search by name, vendor, sonic character, or use case
-- Filter by **type**, **vendor**, and **collection** (e.g. Arturia V Collection 7, Soundtoys Bundle v5.3, Plugin Alliance, Waves Horizon, Komplete 13)
-- Detail pane: what it does, sonic character, best uses, and example use cases
-
-Owned vs installed tracking can be added later.
-
-
-## Phone testing
-
-While a Cloud Agent session is running, a temporary public tunnel can be started for iPhone testing.
-
-For a lasting URL, enable GitHub Pages on the `gh-pages` branch:
-
-1. Repo **Settings → Pages**
-2. Source: **Deploy from a branch**
-3. Branch: `gh-pages` / `/ (root)`
-4. Open `https://zeitfenster.github.io/aso/`
-
-The Vite `base` is set to `/aso/` for that Pages URL.
+Installers land in `release/`.

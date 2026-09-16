@@ -1,0 +1,215 @@
+:root {
+  color-scheme: dark;
+  --radius: 18px;
+  --control-radius: calc(var(--radius) / 2);
+  --font-display: "Avenir Next", "Segoe UI", "Helvetica Neue", sans-serif;
+  --font-body: "Avenir Next", "Segoe UI", "Helvetica Neue", sans-serif;
+  --font-mono: "SF Mono", "Menlo", "Consolas", monospace;
+
+  /* Studio graphite / silver (default dark) */
+  --bg: #121314;
+  --bg-elevated: rgba(28, 30, 32, 0.94);
+  --ink: #eceeef;
+  --ink-soft: #9aa0a6;
+  --muted: #7a8088;
+  --line: rgba(236, 238, 239, 0.12);
+  --accent: #a7adb4;
+  --accent-strong: #c4c9cf;
+  --accent-soft: rgba(167, 173, 180, 0.18);
+  --accent-border: rgba(167, 173, 180, 0.48);
+  --on-accent: #141618;
+  --gold: #8e949c;
+  --warn: #d4894a;
+  --warn-soft: rgba(212, 137, 74, 0.14);
+  --warn-border: rgba(212, 137, 74, 0.4);
+  --shadow: 0 18px 50px rgba(0, 0, 0, 0.45);
+  --surface-glass: rgba(255, 255, 255, 0.06);
+  --surface-glass-strong: rgba(255, 255, 255, 0.1);
+  --surface-inset: rgba(0, 0, 0, 0.28);
+  --control-fill: rgba(255, 255, 255, 0.06);
+  --chip-bg: rgba(167, 173, 180, 0.18);
+  --chip-bg-hover: rgba(167, 173, 180, 0.28);
+  --overlay-scrim: rgba(0, 0, 0, 0.58);
+  --th-bg: rgba(16, 17, 18, 0.96);
+  --row-hover: rgba(167, 173, 180, 0.08);
+  --row-selected: rgba(167, 173, 180, 0.16);
+  --row-selected-strong: rgba(167, 173, 180, 0.22);
+  --group-bg: rgba(255, 255, 255, 0.035);
+  --group-expanded: rgba(167, 173, 180, 0.14);
+  --group-expanded-hover: rgba(167, 173, 180, 0.18);
+  --neutral-soft: rgba(160, 166, 172, 0.12);
+  --neutral-border: rgba(160, 166, 172, 0.28);
+  --ink-faint: rgba(236, 238, 239, 0.08);
+  --atmosphere:
+    radial-gradient(1100px 420px at 50% -12%, rgba(210, 218, 230, 0.1), transparent 58%),
+    radial-gradient(900px 480px at 12% -10%, rgba(170, 176, 184, 0.1), transparent 60%),
+    radial-gradient(700px 420px at 90% 0%, rgba(120, 126, 134, 0.08), transparent 55%),
+    linear-gradient(160deg, #151618 0%, #101112 48%, #0d0e0f 100%);
+  --brand-mark: linear-gradient(180deg, #c8ced4 0%, #6f757d 100%);
+  --brand-mark-shadow: 0 8px 20px rgba(0, 0, 0, 0.35);
+  /* Specular graphite — restrained sheen, not neon glow */
+  --sheen-fill: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.09) 0%,
+    rgba(255, 255, 255, 0.025) 42%,
+    rgba(0, 0, 0, 0.16) 100%
+  );
+  --sheen-edge: rgba(255, 255, 255, 0.14);
+  --sheen-inset: inset 0 1px 0 var(--sheen-edge);
+  --focus-glow:
+    0 0 0 1px rgba(210, 216, 224, 0.28),
+    0 0 0 4px rgba(167, 173, 180, 0.12);
+  --brand-glow:
+    drop-shadow(0 8px 16px rgba(0, 0, 0, 0.4))
+    drop-shadow(0 0 18px rgba(200, 208, 220, 0.16));
+  --primary-sheen: linear-gradient(180deg, #d5dae0 0%, #a9afb6 48%, #8c929a 100%);
+  --primary-sheen-hover: linear-gradient(180deg, #e2e6eb 0%, #b8bec5 48%, #979da5 100%);
+  --primary-sheen-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.34),
+    0 1px 2px rgba(0, 0, 0, 0.28);
+  --primary-sheen-shadow-hover:
+    inset 0 1px 0 rgba(255, 255, 255, 0.42),
+    0 1px 2px rgba(0, 0, 0, 0.3),
+    0 0 18px rgba(200, 208, 220, 0.14);
+  --progress-track: rgba(236, 238, 239, 0.1);
+  --progress-bar: linear-gradient(90deg, #8e949c, #c8ced4);
+  --select-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%239aa0a6' d='M1.1 1.2 6 6.1l4.9-4.9 1.1 1.1L6 8.3.0 2.3z'/%3E%3C/svg%3E");
+  /* Opaque — Chromium on Windows composites <option> onto a white popup. */
+  --option-bg: #1c1e20;
+  --option-ink: #eceeef;
+  --wave-bg: rgba(236, 238, 239, 0.06);
+  --wave-fill: rgba(180, 186, 192, 0.9);
+  --wave-playhead: rgba(220, 90, 70, 0.95);
+  --wave-region: rgba(80, 140, 200, 0.22);
+  --window-bg: #121314;
+  --atmosphere-noise-opacity: 0.2;
+}
+
+[data-theme='light'] {
+  color-scheme: light;
+  --bg: #e9eaec;
+  --bg-elevated: rgba(252, 252, 253, 0.9);
+  --ink: #1a1c1e;
+  --ink-soft: #5a5f66;
+  --muted: #6e747c;
+  --line: rgba(26, 28, 30, 0.12);
+  --accent: #4a5058;
+  --accent-strong: #343940;
+  --accent-soft: rgba(74, 80, 88, 0.1);
+  --accent-border: rgba(74, 80, 88, 0.4);
+  --on-accent: #f5f6f7;
+  --gold: #6a7078;
+  --warn: #8a4b1f;
+  --warn-soft: rgba(138, 75, 31, 0.1);
+  --warn-border: rgba(138, 75, 31, 0.35);
+  --shadow: 0 18px 50px rgba(26, 28, 30, 0.08);
+  --surface-glass: rgba(255, 255, 255, 0.4);
+  --surface-glass-strong: rgba(255, 255, 255, 0.62);
+  --surface-inset: rgba(255, 255, 255, 0.4);
+  --control-fill: rgba(255, 255, 255, 0.62);
+  --chip-bg: #e2e4e8;
+  --chip-bg-hover: #d5d8dd;
+  --overlay-scrim: rgba(26, 28, 30, 0.38);
+  --th-bg: rgba(244, 245, 247, 0.96);
+  --row-hover: rgba(74, 80, 88, 0.05);
+  --row-selected: rgba(74, 80, 88, 0.1);
+  --row-selected-strong: rgba(74, 80, 88, 0.15);
+  --group-bg: rgba(26, 28, 30, 0.035);
+  --group-expanded: rgba(74, 80, 88, 0.12);
+  --group-expanded-hover: rgba(74, 80, 88, 0.16);
+  --neutral-soft: rgba(90, 94, 100, 0.1);
+  --neutral-border: rgba(90, 94, 100, 0.22);
+  --ink-faint: rgba(26, 28, 30, 0.07);
+  --atmosphere:
+    radial-gradient(1100px 420px at 50% -12%, rgba(255, 255, 255, 0.45), transparent 55%),
+    radial-gradient(900px 480px at 12% -10%, rgba(120, 126, 134, 0.1), transparent 60%),
+    radial-gradient(700px 420px at 90% 0%, rgba(100, 96, 90, 0.07), transparent 55%),
+    linear-gradient(160deg, #eef0f2 0%, #e6e8eb 48%, #e2e4e7 100%);
+  --brand-mark: linear-gradient(180deg, #6a7078 0%, #3a3f46 100%);
+  --brand-mark-shadow: 0 8px 20px rgba(26, 28, 30, 0.14);
+  --sheen-fill: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.72) 0%,
+    rgba(255, 255, 255, 0.28) 48%,
+    rgba(230, 233, 237, 0.55) 100%
+  );
+  --sheen-edge: rgba(255, 255, 255, 0.85);
+  --sheen-inset: inset 0 1px 0 var(--sheen-edge);
+  --focus-glow:
+    0 0 0 1px rgba(74, 80, 88, 0.28),
+    0 0 0 4px rgba(74, 80, 88, 0.1);
+  --brand-glow:
+    drop-shadow(0 6px 12px rgba(26, 28, 30, 0.14))
+    drop-shadow(0 0 14px rgba(120, 128, 140, 0.1));
+  --primary-sheen: linear-gradient(180deg, #5c636c 0%, #4a5058 52%, #3a3f46 100%);
+  --primary-sheen-hover: linear-gradient(180deg, #6a717a 0%, #545a62 52%, #43484f 100%);
+  --primary-sheen-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.22),
+    0 1px 2px rgba(26, 28, 30, 0.16);
+  --primary-sheen-shadow-hover:
+    inset 0 1px 0 rgba(255, 255, 255, 0.28),
+    0 1px 2px rgba(26, 28, 30, 0.18),
+    0 0 14px rgba(74, 80, 88, 0.12);
+  --progress-track: rgba(26, 28, 30, 0.08);
+  --progress-bar: linear-gradient(90deg, #6a7078, #3a3f46);
+  --select-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%235a5f66' d='M1.1 1.2 6 6.1l4.9-4.9 1.1 1.1L6 8.3.0 2.3z'/%3E%3C/svg%3E");
+  --option-bg: #fcfcfd;
+  --option-ink: #1a1c1e;
+  --wave-bg: rgba(26, 28, 30, 0.05);
+  --wave-fill: rgba(74, 80, 88, 0.85);
+  --wave-playhead: rgba(196, 72, 54, 0.95);
+  --wave-region: rgba(80, 140, 200, 0.22);
+  --window-bg: #e9eaec;
+  --atmosphere-noise-opacity: 0.28;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+}
+
+body {
+  font-family: var(--font-body);
+  color: var(--ink);
+  background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+button,
+input,
+select {
+  font: inherit;
+}
+
+/* Windows Chromium draws the open <select> list itself and inherits
+   the closed control's text color onto a light popup. macOS uses a
+   system popup and ignores option/optgroup rules. */
+select option,
+select optgroup {
+  background-color: var(--option-bg);
+  color: var(--option-ink);
+}
+
+code {
+  font-family: var(--font-mono);
+  font-size: 0.92em;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  border: 0;
+}
