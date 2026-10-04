@@ -6,6 +6,8 @@ contextBridge.exposeInMainWorld('asoApi', {
   getWindowAppearance: () => ipcRenderer.invoke('window:getAppearance'),
   setWindowAppearance: (payload) =>
     ipcRenderer.invoke('window:setAppearance', payload),
+  getLibrary: () => ipcRenderer.invoke('library:get'),
+  setLibrary: (payload) => ipcRenderer.invoke('library:set', payload),
   onMenuCommand: (callback) => {
     const listener = (_event, payload) => callback(payload);
     ipcRenderer.on('menu:command', listener);

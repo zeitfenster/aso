@@ -9,12 +9,15 @@ import { soundtoysBundle } from './soundtoys'
 import { wavesNamed, wavesHorizon } from './waves'
 import { pluginAlliance } from './plugin-alliance'
 import { komplete13 } from './komplete'
-import { nomadFactoryBlueTubes } from './nomad-factory'
+import { nomadFactoryBlueTubes, nomadFactoryLiquid } from './nomad-factory'
+import { pspAnniversaryBundle } from './psp-audioware'
+import { SUBTYPE_ASSIGNMENTS } from './subtype-assignments'
+import { INFERRED_SUBTYPES } from './inferred-subtypes'
 
-export type { CatalogEntry, PluginType } from './types'
-export { COLLECTION_NAMES } from './types'
+export type { CatalogEntry, PluginSubtype, PluginType, SubtypeOrigin } from './types'
+export { COLLECTION_NAMES, PLUGIN_SUBTYPES } from './types'
 
-export const catalog: CatalogEntry[] = [
+const catalogSource: CatalogEntry[] = [
   ...hostsAndApps,
   ...standaloneInstruments,
   ...standaloneEffects,
@@ -27,7 +30,38 @@ export const catalog: CatalogEntry[] = [
   ...pluginAlliance,
   ...komplete13,
   ...nomadFactoryBlueTubes,
-].sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }))
+  ...nomadFactoryLiquid,
+  ...pspAnniversaryBundle,
+]
+
+const catalogIds = new Set(catalogSource.map((entry) => entry.id))
+for (const id of Object.keys(SUBTYPE_ASSIGNMENTS)) {
+  if (!catalogIds.has(id)) {
+    throw new Error(`Unknown catalog id in subtype assignments: ${id}`)
+  }
+}
+for (const id of Object.keys(INFERRED_SUBTYPES)) {
+  if (!catalogIds.has(id)) {
+    throw new Error(`Unknown catalog id in inferred subtypes: ${id}`)
+  }
+  if (SUBTYPE_ASSIGNMENTS[id]) {
+    throw new Error(`Inferred subtype overlaps vendor assignment: ${id}`)
+  }
+}
+
+export const catalog: CatalogEntry[] = catalogSource
+  .map((entry) => {
+    const vendor = SUBTYPE_ASSIGNMENTS[entry.id]
+    const inferred = INFERRED_SUBTYPES[entry.id]
+    if (vendor) {
+      return { ...entry, subtypes: vendor, subtypeOrigin: 'vendor' as const }
+    }
+    if (inferred) {
+      return { ...entry, subtypes: inferred, subtypeOrigin: 'inferred' as const }
+    }
+    return { ...entry, subtypes: [], subtypeOrigin: undefined }
+  })
+  .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }))
 
 export const allTypes: PluginType[] = Array.from(
   new Set(catalog.flatMap((e) => e.types)),

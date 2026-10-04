@@ -1,7 +1,16 @@
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 import { catalog, type CatalogEntry } from './data';
+import CompareOverlay from './CompareOverlay';
+import DefaultsOverlay from './DefaultsOverlay';
 import Hint from './Hint';
+import PluginJournal from './PluginJournal';
 import PreferencesOverlay, { type ThemeName } from './PreferencesOverlay';
+import { journalOf } from './library/storage';
+import {
+  defaultSlotFor,
+  journalHaystack,
+} from './library/types';
+import { useLibrary } from './library/useLibrary';
 import appLogo from './assets/aso-mark.svg';
 import './App.css';
 
@@ -9,6 +18,17 @@ type SortMode = 'name' | 'vendor' | 'type';
 
 const THEME_STORAGE_KEY = 'aso-theme';
 const ALL = 'All';
+const UNSPECIFIED = 'Unspecified';
+const INFERRED = 'Inferred';
+const MAX_COMPARE = 3;
+
+function entrySubtypes(entry: CatalogEntry) {
+  return entry.subtypes ?? [];
+}
+
+function isInferred(entry: CatalogEntry) {
+  return entry.subtypeOrigin === 'inferred';
+}
 
 function readStoredTheme(): ThemeName {
   try {
@@ -20,7 +40,7 @@ function readStoredTheme(): ThemeName {
   return 'dark';
 }
 
-function matchesQuery(entry: CatalogEntry, q: string): boolean {
+function matchesQuery(entry: CatalogEntry, q: string, extra: string[] = []): boolean {
   if (!q) return true;
   const hay = [
     entry.name,
@@ -30,9 +50,11 @@ function matchesQuery(entry: CatalogEntry, q: string): boolean {
     entry.bestFor,
     entry.kind,
     ...entry.types,
+    ...entrySubtypes(entry),
     ...entry.collections,
     ...entry.tags,
     ...entry.useCases,
+    ...extra,
   ]
     .join(' ')
     .toLowerCase();
@@ -50,7 +72,7 @@ function kindLabel(kind: CatalogEntry['kind']) {
   return 'Plugin';
 }
 
-type FilterKey = 'query' | 'type' | 'vendor' | 'collection' | 'kind';
+type FilterKey = 'query' | 'type' | 'vendor' | 'collection' | 'kind' | 'subtype';
 
 function matchesFilters(
   entry: CatalogEntry,
@@ -60,10 +82,12 @@ function matchesFilters(
     vendor: string;
     collection: string;
     kind: string;
+    subtype: string;
   },
   omit?: FilterKey,
+  extra: string[] = [],
 ) {
-  if (omit !== 'query' && !matchesQuery(entry, filters.query)) return false;
+  if (omit !== 'query' && !matchesQuery(entry, filters.query, extra)) return false;
   if (
     omit !== 'type' &&
     filters.type !== ALL &&
@@ -84,6 +108,16 @@ function matchesFilters(
   if (omit !== 'kind' && filters.kind !== ALL && entry.kind !== filters.kind) {
     return false;
   }
+  if (omit !== 'subtype' && filters.subtype !== ALL) {
+    const subtypes = entrySubtypes(entry);
+    if (filters.subtype === UNSPECIFIED) {
+      if (subtypes.length > 0) return false;
+    } else if (filters.subtype === INFERRED) {
+      if (entry.subtypeOrigin !== 'inferred') return false;
+    } else if (!subtypes.some((subtype) => subtype === filters.subtype)) {
+      return false;
+    }
+  }
   return true;
 }
 
@@ -98,11 +132,25 @@ export default function App() {
   const [vendorFilter, setVendorFilter] = useState(ALL);
   const [collectionFilter, setCollectionFilter] = useState(ALL);
   const [kindFilter, setKindFilter] = useState(ALL);
+  const [subtypeFilter, setSubtypeFilter] = useState(ALL);
   const [sortMode, setSortMode] = useState<SortMode>('name');
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [compareIds, setCompareIds] = useState<string[]>([]);
+  const [compareOpen, setCompareOpen] = useState(false);
   const [theme, setTheme] = useState<ThemeName>(readStoredTheme);
   const [prefsOpen, setPrefsOpen] = useState(false);
+  const [defaultsOpen, setDefaultsOpen] = useState(false);
+  const [shortlistOnly, setShortlistOnly] = useState(false);
   const selectedRowRef = useRef<HTMLTableRowElement | null>(null);
+  const {
+    library,
+    ready: libraryReady,
+    patchPlugin,
+    toggleShortlist,
+    setDefault,
+    assignDefaultSlot,
+    touchRecent,
+  } = useLibrary();
 
   const currentFilters = useMemo(
     () => ({
@@ -111,53 +159,93 @@ export default function App() {
       vendor: vendorFilter,
       collection: collectionFilter,
       kind: kindFilter,
+      subtype: subtypeFilter,
     }),
-    [deferredQuery, typeFilter, vendorFilter, collectionFilter, kindFilter],
+    [deferredQuery, typeFilter, vendorFilter, collectionFilter, kindFilter, subtypeFilter],
   );
+
+  const extrasFor = (entry: CatalogEntry) =>
+    journalHaystack(library.plugins[entry.id]);
 
   const typeOptions = useMemo(
     () =>
       uniqueSorted(
         catalog
-          .filter((entry) => matchesFilters(entry, currentFilters, 'type'))
+          .filter((entry) =>
+            matchesFilters(entry, currentFilters, 'type', extrasFor(entry)),
+          )
           .flatMap((entry) => entry.types),
       ),
-    [currentFilters],
+    [currentFilters, library.plugins],
   );
 
   const vendorOptions = useMemo(
     () =>
       uniqueSorted(
         catalog
-          .filter((entry) => matchesFilters(entry, currentFilters, 'vendor'))
+          .filter((entry) =>
+            matchesFilters(entry, currentFilters, 'vendor', extrasFor(entry)),
+          )
           .map((entry) => entry.vendor),
       ),
-    [currentFilters],
+    [currentFilters, library.plugins],
   );
 
   const collectionOptions = useMemo(
     () =>
       uniqueSorted(
         catalog
-          .filter((entry) => matchesFilters(entry, currentFilters, 'collection'))
+          .filter((entry) =>
+            matchesFilters(entry, currentFilters, 'collection', extrasFor(entry)),
+          )
           .flatMap((entry) => entry.collections),
       ),
-    [currentFilters],
+    [currentFilters, library.plugins],
   );
 
   const kindOptions = useMemo(() => {
     const kinds = Array.from(
       new Set(
         catalog
-          .filter((entry) => matchesFilters(entry, currentFilters, 'kind'))
+          .filter((entry) =>
+            matchesFilters(entry, currentFilters, 'kind', extrasFor(entry)),
+          )
           .map((entry) => entry.kind),
       ),
     );
     return kinds.sort((a, b) => kindLabel(a).localeCompare(kindLabel(b)));
-  }, [currentFilters]);
+  }, [currentFilters, library.plugins]);
+
+  const subtypePool = useMemo(
+    () =>
+      catalog.filter((entry) =>
+        matchesFilters(entry, currentFilters, 'subtype', extrasFor(entry)),
+      ),
+    [currentFilters, library.plugins],
+  );
+
+  const subtypeOptions = useMemo(
+    () => uniqueSorted(subtypePool.flatMap((entry) => entrySubtypes(entry))),
+    [subtypePool],
+  );
+
+  const hasUnspecifiedSubtypes = useMemo(
+    () => subtypePool.some((entry) => entrySubtypes(entry).length === 0),
+    [subtypePool],
+  );
+
+  const hasInferredSubtypes = useMemo(
+    () => subtypePool.some((entry) => isInferred(entry)),
+    [subtypePool],
+  );
 
   const filtered = useMemo(() => {
-    const list = catalog.filter((entry) => matchesFilters(entry, currentFilters));
+    let list = catalog.filter((entry) =>
+      matchesFilters(entry, currentFilters, undefined, extrasFor(entry)),
+    );
+    if (shortlistOnly) {
+      list = list.filter((entry) => library.plugins[entry.id]?.shortlisted);
+    }
 
     return [...list].sort((a, b) => {
       if (sortMode === 'vendor') {
@@ -171,10 +259,48 @@ export default function App() {
       }
       return a.name.localeCompare(b.name);
     });
-  }, [currentFilters, sortMode]);
+  }, [currentFilters, sortMode, shortlistOnly, library.plugins]);
 
   const selected =
-    filtered.find((entry) => entry.id === selectedId) ?? filtered[0] ?? null;
+    (selectedId
+      ? catalog.find((entry) => entry.id === selectedId) ?? null
+      : null) ??
+    filtered[0] ??
+    null;
+
+  const selectedJournal = selected ? journalOf(library, selected.id) : null;
+  const selectedDefaultSlot = selected
+    ? defaultSlotFor(library, selected.id)
+    : null;
+
+  const recentEntries = useMemo(
+    () =>
+      library.lastOpened
+        .map((id) => catalog.find((entry) => entry.id === id))
+        .filter((entry): entry is CatalogEntry => Boolean(entry)),
+    [library.lastOpened],
+  );
+
+  function selectPlugin(id: string) {
+    setSelectedId(id);
+    touchRecent(id);
+  }
+
+  const compareEntries = useMemo(
+    () =>
+      compareIds
+        .map((id) => catalog.find((entry) => entry.id === id))
+        .filter((entry): entry is CatalogEntry => Boolean(entry)),
+    [compareIds],
+  );
+
+  function toggleCompare(id: string) {
+    setCompareIds((current) => {
+      if (current.includes(id)) return current.filter((item) => item !== id);
+      if (current.length >= MAX_COMPARE) return current;
+      return [...current, id];
+    });
+  }
 
   const vendorCount = useMemo(
     () => new Set(filtered.map((entry) => entry.vendor)).size,
@@ -198,6 +324,14 @@ export default function App() {
         label: 'Type',
         value: typeFilter,
         clear: () => setTypeFilter(ALL),
+      });
+    }
+    if (subtypeFilter !== ALL) {
+      chips.push({
+        key: 'subtype',
+        label: 'Subtype',
+        value: subtypeFilter,
+        clear: () => setSubtypeFilter(ALL),
       });
     }
     if (kindFilter !== ALL) {
@@ -224,8 +358,24 @@ export default function App() {
         clear: () => setCollectionFilter(ALL),
       });
     }
+    if (shortlistOnly) {
+      chips.push({
+        key: 'shortlist',
+        label: 'Shortlist',
+        value: 'On',
+        clear: () => setShortlistOnly(false),
+      });
+    }
     return chips;
-  }, [query, kindFilter, typeFilter, vendorFilter, collectionFilter]);
+  }, [
+    query,
+    kindFilter,
+    typeFilter,
+    subtypeFilter,
+    vendorFilter,
+    collectionFilter,
+    shortlistOnly,
+  ]);
 
   useEffect(() => {
     if (typeFilter !== ALL && !typeOptions.includes(typeFilter)) {
@@ -255,6 +405,15 @@ export default function App() {
   }, [kindFilter, kindOptions]);
 
   useEffect(() => {
+    if (subtypeFilter === ALL) return;
+    const valid =
+      (subtypeFilter === UNSPECIFIED && hasUnspecifiedSubtypes) ||
+      (subtypeFilter === INFERRED && hasInferredSubtypes) ||
+      subtypeOptions.includes(subtypeFilter);
+    if (!valid) setSubtypeFilter(ALL);
+  }, [subtypeFilter, subtypeOptions, hasUnspecifiedSubtypes, hasInferredSubtypes]);
+
+  useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
     try {
       localStorage.setItem(THEME_STORAGE_KEY, theme);
@@ -279,6 +438,29 @@ export default function App() {
         }
         return;
       }
+      if (defaultsOpen) {
+        if (event.key === 'Escape') {
+          event.preventDefault();
+          setDefaultsOpen(false);
+        }
+        return;
+      }
+      if (compareOpen) {
+        if (event.key === 'Escape') {
+          event.preventDefault();
+          setCompareOpen(false);
+        }
+        return;
+      }
+      const target = event.target as HTMLElement | null;
+      if (
+        target &&
+        (target.tagName === 'TEXTAREA' ||
+          target.tagName === 'INPUT' ||
+          target.tagName === 'SELECT')
+      ) {
+        return;
+      }
       if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return;
       if (filtered.length === 0) return;
       const currentIndex = selected
@@ -289,15 +471,19 @@ export default function App() {
       if (currentIndex < 0) nextIndex = event.key === 'ArrowDown' ? 0 : filtered.length - 1;
       if (nextIndex < 0 || nextIndex >= filtered.length) return;
       event.preventDefault();
-      setSelectedId(filtered[nextIndex].id);
+      selectPlugin(filtered[nextIndex].id);
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [filtered, selected, prefsOpen]);
+  }, [filtered, selected, prefsOpen, defaultsOpen, compareOpen, touchRecent]);
 
   useEffect(() => {
     selectedRowRef.current?.scrollIntoView({ block: 'nearest' });
   }, [selected?.id]);
+
+  useEffect(() => {
+    if (compareOpen && compareIds.length < 2) setCompareOpen(false);
+  }, [compareOpen, compareIds.length]);
 
   return (
     <div className="app">
@@ -342,7 +528,7 @@ export default function App() {
                     className="search toolbar-search"
                     value={query}
                     onChange={(event) => setQuery(event.target.value)}
-                    placeholder="Name, vendor, character, use case…"
+                    placeholder="Name, vendor, character, notes…"
                     type="search"
                   />
                 </label>
@@ -360,6 +546,29 @@ export default function App() {
                       </option>
                     ))}
                   </select>
+                </label>
+                <label className="toolbar-filter-field">
+                  <span className="toolbar-filter-label">Subtype</span>
+                  <Hint text="Vendor spec = named circuit or modeled unit. Inferred = common classification, not a spec sheet. Unspecified = no architecture class (meters, hosts, utilities) or not assigned yet.">
+                    <select
+                      className="toolbar-filter-select"
+                      value={subtypeFilter}
+                      onChange={(event) => setSubtypeFilter(event.target.value)}
+                    >
+                      <option>{ALL}</option>
+                      {hasUnspecifiedSubtypes ? (
+                        <option value={UNSPECIFIED}>{UNSPECIFIED}</option>
+                      ) : null}
+                      {hasInferredSubtypes ? (
+                        <option value={INFERRED}>{INFERRED}</option>
+                      ) : null}
+                      {subtypeOptions.map((subtype) => (
+                        <option key={subtype} value={subtype}>
+                          {subtype}
+                        </option>
+                      ))}
+                    </select>
+                  </Hint>
                 </label>
                 <label className="toolbar-filter-field">
                   <span className="toolbar-filter-label">Vendor</span>
@@ -420,6 +629,35 @@ export default function App() {
                     <option value="type">Type</option>
                   </select>
                 </label>
+                <Hint text="Tick 2 or 3 rows, then compare architecture and notes side by side.">
+                  <button
+                    type="button"
+                    className="btn ghost toolbar-compare-btn"
+                    disabled={compareIds.length < 2}
+                    onClick={() => setCompareOpen(true)}
+                  >
+                    Compare{compareIds.length ? ` (${compareIds.length})` : ''}
+                  </button>
+                </Hint>
+                <Hint text="Show only plugins you marked as a shortlist.">
+                  <button
+                    type="button"
+                    className={`btn ghost toolbar-compare-btn${shortlistOnly ? ' is-on' : ''}`}
+                    aria-pressed={shortlistOnly}
+                    onClick={() => setShortlistOnly((current) => !current)}
+                  >
+                    Shortlist
+                  </button>
+                </Hint>
+                <Hint text="Optional go-to plugin for repeating jobs, like vocal compressor or mix bus glue.">
+                  <button
+                    type="button"
+                    className="btn ghost toolbar-compare-btn"
+                    onClick={() => setDefaultsOpen(true)}
+                  >
+                    Defaults
+                  </button>
+                </Hint>
               </div>
               <div className="active-filters">
                 {activeFilters.map((chip) => (
@@ -435,6 +673,21 @@ export default function App() {
                   </button>
                 ))}
               </div>
+              {recentEntries.length > 0 ? (
+                <div className="recent-row">
+                  <span className="recent-label">Recent</span>
+                  {recentEntries.map((entry) => (
+                    <button
+                      key={entry.id}
+                      type="button"
+                      className={`recent-chip${selected?.id === entry.id ? ' is-current' : ''}`}
+                      onClick={() => selectPlugin(entry.id)}
+                    >
+                      {entry.name}
+                    </button>
+                  ))}
+                </div>
+              ) : null}
             </div>
           </div>
           <div className="folder-bar-stats">
@@ -461,6 +714,9 @@ export default function App() {
               <table className="livesets-table catalog-table">
                 <thead>
                   <tr>
+                    <th className="col-compare">
+                      <span className="sr-only">Compare</span>
+                    </th>
                     <th className="col-project">Name</th>
                     <th className="col-vendor">Vendor</th>
                     <th className="col-type">Type</th>
@@ -470,18 +726,35 @@ export default function App() {
                 <tbody>
                   {filtered.map((entry) => {
                     const isSelected = selected?.id === entry.id;
+                    const inCompare = compareIds.includes(entry.id);
+                    const compareFull = !inCompare && compareIds.length >= MAX_COMPARE;
+                    const subtypes = entrySubtypes(entry);
                     return (
                       <tr
                         key={entry.id}
                         ref={isSelected ? selectedRowRef : undefined}
                         className={isSelected ? 'selected' : undefined}
-                        onClick={() => setSelectedId(entry.id)}
+                        onClick={() => selectPlugin(entry.id)}
                       >
+                        <td className="col-compare">
+                          <input
+                            type="checkbox"
+                            className="compare-check"
+                            checked={inCompare}
+                            disabled={compareFull}
+                            aria-label={`Compare ${entry.name}`}
+                            onClick={(event) => event.stopPropagation()}
+                            onChange={() => toggleCompare(entry.id)}
+                          />
+                        </td>
                         <td className="col-project">
                           <div className="name-cell">
                             <div className="name-line">
                               <strong>{entry.name}</strong>
                               <span className="badge">{kindLabel(entry.kind)}</span>
+                              {library.plugins[entry.id]?.shortlisted ? (
+                                <span className="badge latest-badge">Shortlist</span>
+                              ) : null}
                             </div>
                             <span className="summary">{entry.summary}</span>
                           </div>
@@ -495,6 +768,11 @@ export default function App() {
                               +{entry.types.length - 1}
                             </span>
                           ) : null}
+                          <span className="subtype-cell">
+                            {subtypes[0] || 'Unspecified'}
+                            {subtypes.length > 1 ? ` +${subtypes.length - 1}` : ''}
+                            {isInferred(entry) ? ' · inferred' : ''}
+                          </span>
                         </td>
                         <td className="col-collection">
                           {entry.collections[0] || '—'}
@@ -504,7 +782,7 @@ export default function App() {
                   })}
                   {filtered.length === 0 && (
                     <tr>
-                      <td className="empty-row" colSpan={4}>
+                      <td className="empty-row" colSpan={5}>
                         No plugins match these filters.
                       </td>
                     </tr>
@@ -534,6 +812,47 @@ export default function App() {
                   ))}
                   <span className="badge">{kindLabel(selected.kind)}</span>
                 </div>
+                <div className="chip-row">
+                  {entrySubtypes(selected).length > 0 ? (
+                    <>
+                      {entrySubtypes(selected).map((subtype) => (
+                        <button
+                          key={subtype}
+                          type="button"
+                          className="badge latest-badge filter-chip"
+                          onClick={() => setSubtypeFilter(subtype)}
+                        >
+                          {subtype}
+                        </button>
+                      ))}
+                      {isInferred(selected) ? (
+                        <button
+                          type="button"
+                          className="badge inferred-badge filter-chip"
+                          onClick={() => setSubtypeFilter(INFERRED)}
+                        >
+                          Inferred
+                        </button>
+                      ) : (
+                        <span className="badge">Vendor spec</span>
+                      )}
+                    </>
+                  ) : (
+                    <button
+                      type="button"
+                      className="badge filter-chip"
+                      onClick={() => setSubtypeFilter(UNSPECIFIED)}
+                    >
+                      Unspecified
+                    </button>
+                  )}
+                </div>
+                <p className="muted detail-subtype-note">
+                  Vendor spec is a named circuit or modeled unit. Inferred is a
+                  common classification, not a spec sheet. Unspecified means no
+                  architecture class (or not assigned). What it does, character,
+                  and best-for are catalog notes — not vendor copy.
+                </p>
                 {selected.collections.length > 0 && (
                   <div className="chip-row">
                     {selected.collections.map((collection) => (
@@ -548,6 +867,16 @@ export default function App() {
                     ))}
                   </div>
                 )}
+
+                {libraryReady && selectedJournal ? (
+                  <PluginJournal
+                    entry={selectedJournal}
+                    defaultSlot={selectedDefaultSlot}
+                    onPatch={(patch) => patchPlugin(selected.id, patch)}
+                    onToggleShortlist={() => toggleShortlist(selected.id)}
+                    onAssignDefault={(slot) => assignDefaultSlot(selected.id, slot)}
+                  />
+                ) : null}
 
                 <section className="detail-section">
                   <h3>
@@ -580,7 +909,7 @@ export default function App() {
                 {selected.notes ? (
                   <section className="detail-section">
                     <h3>
-                      <span className="detail-section-title">Notes</span>
+                      <span className="detail-section-title">Catalog notes</span>
                     </h3>
                     <p className="muted">{selected.notes}</p>
                   </section>
@@ -608,6 +937,34 @@ export default function App() {
           </article>
         </div>
       </main>
+
+      {compareOpen && compareEntries.length >= 2 ? (
+        <CompareOverlay
+          entries={compareEntries}
+          onClose={() => setCompareOpen(false)}
+          onRemove={(id) =>
+            setCompareIds((current) => current.filter((item) => item !== id))
+          }
+          onClear={() => {
+            setCompareIds([]);
+            setCompareOpen(false);
+          }}
+        />
+      ) : null}
+
+      {defaultsOpen ? (
+        <DefaultsOverlay
+          library={library}
+          catalog={catalog}
+          selectedId={selectedId}
+          onAssign={(slotId, pluginId) => setDefault(slotId, pluginId)}
+          onJump={(pluginId) => {
+            selectPlugin(pluginId);
+            setDefaultsOpen(false);
+          }}
+          onClose={() => setDefaultsOpen(false)}
+        />
+      ) : null}
 
       {prefsOpen ? (
         <PreferencesOverlay

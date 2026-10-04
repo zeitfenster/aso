@@ -265,6 +265,26 @@ export const standaloneEffects: CatalogEntry[] = [
     tags: ['filter', 'fabfilter', 'modulation'],
   },
   {
+    id: 'fabfilter-timeless-3',
+    name: 'Timeless 3',
+    vendor: 'FabFilter',
+    kind: 'plugin',
+    types: ['Delay', 'Creative FX'],
+    collections: [],
+    summary:
+      'Vintage-style tape delay with two programmable delay lines, up to 16 taps, analog-sounding filters, Drive/Lo-Fi/Diffuse/Dynamics/Pitch effects, freeze, ping-pong, and deep drag-and-drop modulation.',
+    sonicCharacter:
+      'From warm analog-ish slapbacks and tape wow to smeared, crushed, or pitch-shifted echo machines—everyday delay that can turn into sound design when modulation and feedback are pushed.',
+    bestFor:
+      'Vocal/instrument delays, tape-style throws, and creative modulated echo FX.',
+    useCases: [
+      'Dotted vocal delay with envelope-follower ducking so repeats sit behind the dry word.',
+      'Tape-mode delay-time moves for pitchy throw FX.',
+      'Diffuse + freeze for infinite, washy delay textures on a synth or transition.',
+    ],
+    tags: ['delay', 'fabfilter', 'tape'],
+  },
+  {
     id: 'minimal-audio-poly-flanger',
     name: 'Poly Flanger',
     vendor: 'Minimal Audio',
@@ -323,5 +343,26 @@ export const standaloneEffects: CatalogEntry[] = [
       'Lightweight alternative to Dual Reverb on resource-sensitive sessions.',
     ],
     tags: ['reverb', 'lexicon', 'relab'],
+  },
+  {
+    id: 'slate-fg-36a',
+    name: 'FG-36A',
+    vendor: 'Slate Digital',
+    kind: 'plugin',
+    types: ['Enhancer'],
+    collections: [],
+    summary:
+      'Two-knob vintage exciter (Intensity / Output) modeled on a 1960s rack unit, hosted in Slate’s Virtual Mix Rack. Adds high-end shimmer and sparkle without a conventional EQ boost.',
+    sonicCharacter:
+      'Classic exciter sheen—air and presence on the top while the low end stays put. Easy to get fizzy or harsh if Intensity is pushed.',
+    bestFor:
+      'Vocals, hats, acoustic tops, and 808s/instruments that need high-end life without thinning the bottom.',
+    useCases: [
+      'Add sparkle to a dull vocal without a harsh high shelf.',
+      'Brighten hats or overheads while leaving kick/bass alone.',
+      'A little Intensity on an 808 or synth to lift the top without boosting sub.',
+    ],
+    notes: 'Runs as a module inside Slate Digital Virtual Mix Rack.',
+    tags: ['exciter', 'slate', 'vmr'],
   },
 ]

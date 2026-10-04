@@ -114,3 +114,119 @@ export const nomadFactoryBlueTubes: CatalogEntry[] = [
     ['saturation', 'tube'],
   ),
 ]
+
+const L = 'Nomad Factory Liquid Bundle III'
+
+function liq(
+  id: string,
+  name: string,
+  types: PluginType[],
+  summary: string,
+  sonicCharacter: string,
+  bestFor: string,
+  useCases: string[],
+  tags: string[] = [],
+): CatalogEntry {
+  return {
+    id,
+    name,
+    vendor: 'Nomad Factory',
+    kind: 'plugin',
+    types,
+    collections: [L],
+    summary,
+    sonicCharacter,
+    bestFor,
+    useCases,
+    notes: 'Included in Nomad Factory Liquid Bundle III (current line, v3.0.1).',
+    tags: ['nomad-factory', 'liquid-bundle-iii', ...tags],
+  }
+}
+
+/** Selectable plugins in Liquid Bundle III (6 effects). */
+export const nomadFactoryLiquid: CatalogEntry[] = [
+  liq(
+    'nf-liquid-compressor-iii',
+    'Liquid Compressor III',
+    ['Compressor'],
+    'Vintage-inspired analog-style compressor modernized on Nomad’s current Plugivery framework, with simple musical dynamics rather than a mastering-grade toolkit.',
+    'Warm, slightly colored compression with analog-leaning glue—more “console-ish squeeze” than invisible clean leveling.',
+    'Vocals, bass, drums, and buses that want vintage-flavored dynamics.',
+    [
+      'Gentle vocal compression with analog-ish weight.',
+      'Glue a drum bus without a sterile digital clamp.',
+      'Level a bass DI while adding a little vintage density.',
+    ],
+    ['compressor'],
+  ),
+  liq(
+    'nf-liquid-delays-iii',
+    'Liquid Delays III',
+    ['Delay'],
+    'Vintage-inspired delay for warm, analog-leaning echoes rather than pristine digital slapbacks.',
+    'Darker, slightly saturated repeats with old-studio echo character—musical trails more than hi-fi ping-pong precision.',
+    'Vocals, guitars, and synths needing character delay.',
+    [
+      'Warm vocal throws that sit behind a lead.',
+      'Analog-ish guitar echo instead of a bright digital delay.',
+      'Lo-fi delay beds under a sparse arrangement.',
+    ],
+    ['delay'],
+  ),
+  liq(
+    'nf-liquid-gate-iii',
+    'Liquid Gate III',
+    ['Utility'],
+    'Vintage-inspired gate/expander with threshold, attack, hold, release, and a sidechain filter. Gate mode hard-cuts below threshold; expander mode reduces more gently.',
+    'Cleanup and rhythmic chopping with analog-leaning behavior rather than a sterile digital gate.',
+    'Tightening drums, reducing noise on tracks, and gated special FX.',
+    [
+      'Gate a roomy snare or tom track.',
+      'Expand away hiss on a quiet vocal or guitar take.',
+      'Create classic gated-drum decay on a room mic.',
+    ],
+    ['gate', 'expander'],
+  ),
+  liq(
+    'nf-liquid-mod-iii',
+    'Liquid Mod III',
+    ['Modulation'],
+    'Vintage chorus, flanger, and vibrato in one modulator, with depth, rate, feedback, stereo width, and tempo sync.',
+    'Silky chorus, spacious flange, and expressive vibrato—classic analog-modulation perfume rather than a sterile digital doubler.',
+    'Guitars, vocals, keys, and synths that need movement and width.',
+    [
+      'Subtle chorus on a clean guitar or vocal.',
+      'Tempo-synced flanger sweeps on a synth loop.',
+      'Vibrato on an electric piano or lead for vintage motion.',
+    ],
+    ['chorus', 'flanger', 'vibrato'],
+  ),
+  liq(
+    'nf-liquid-phase-iii',
+    'Liquid Phase III',
+    ['Modulation'],
+    'Vintage-inspired phaser with 4-, 8-, and 12-stage modes, plus speed, depth, manual offset, and stereo spread.',
+    'Warm 70s/80s swirl—from gentle midrange motion to resonant jet-ish sweeps. Manual mode can freeze the phase for static filter color.',
+    'Keys, guitars, synths, and drums wanting classic phaser movement.',
+    [
+      'Slow 8-stage swirl on an electric piano.',
+      '12-stage resonant sweeps into a transition.',
+      'Freeze Manual offset for a static “phased” guitar tone.',
+    ],
+    ['phaser'],
+  ),
+  liq(
+    'nf-liquid-verb-iii',
+    'Liquid Verb III',
+    ['Reverb'],
+    'Vintage-inspired reverb with Room, Hall, and Plate algorithms, plus pre-delay, decay, damping, filters, and stereo width.',
+    'Warm, musical hardware-adjacent spaces rather than a clinical algorithmic hall—rooms and plates with analog-leaning blur.',
+    'Vocals, instruments, and mix sends that want classic studio depth.',
+    [
+      'Short plate on a vocal return.',
+      'Room on drums without a huge modern wash.',
+      'Hall bed under keys or a ballad vocal.',
+    ],
+    ['reverb'],
+  ),
+]

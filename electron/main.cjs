@@ -20,6 +20,7 @@ const { app, BrowserWindow, ipcMain, Menu, nativeImage } = electron;
 const path = require('node:path');
 const fs = require('node:fs');
 const { getWindowAppearance, setWindowAppearance } = require('./settings.cjs');
+const { getLibrary, setLibrary } = require('./library.cjs');
 
 const isDev = process.env.ELECTRON_DEV === '1';
 const isMac = process.platform === 'darwin';
@@ -231,6 +232,14 @@ ipcMain.handle('app:getVersion', () => app.getVersion());
 
 ipcMain.handle('window:getAppearance', () => {
   return { ok: true, ...getWindowAppearance() };
+});
+
+ipcMain.handle('library:get', () => {
+  return { ok: true, library: getLibrary() };
+});
+
+ipcMain.handle('library:set', (_event, payload) => {
+  return { ok: true, library: setLibrary(payload) };
 });
 
 ipcMain.handle('window:setAppearance', (event, payload) => {

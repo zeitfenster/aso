@@ -1,5 +1,20 @@
 export {};
 
+type UserLibraryPayload = {
+  version?: number;
+  plugins?: Record<
+    string,
+    {
+      notes?: string;
+      reachForWhen?: string;
+      presets?: string[];
+      shortlisted?: boolean;
+    }
+  >;
+  defaults?: Record<string, string>;
+  lastOpened?: string[];
+};
+
 type WindowAppearance = {
   ok?: boolean;
   resolution?: string;
@@ -20,6 +35,10 @@ declare global {
         resolution?: string;
         scale?: number;
       }) => Promise<WindowAppearance>;
+      getLibrary: () => Promise<{ ok?: boolean; library?: UserLibraryPayload }>;
+      setLibrary: (
+        payload: UserLibraryPayload,
+      ) => Promise<{ ok?: boolean; library?: UserLibraryPayload }>;
       onMenuCommand: (
         callback: (payload: { action: string }) => void,
       ) => () => void;
