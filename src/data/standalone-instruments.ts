@@ -226,4 +226,47 @@ export const standaloneInstruments: CatalogEntry[] = [
     ],
     tags: ['drums', 'native-plugin', 'wave-alchemy'],
   },
+  {
+    id: 'uad-moog-minimoog',
+    name: 'Moog Minimoog',
+    vendor: 'Universal Audio',
+    kind: 'plugin',
+    types: ['Synth'],
+    collections: [],
+    summary:
+      'UAD native Model D emulation developed with Moog Music: oscillators, ladder filter, nonlinearities, and pitch-tracking quirks of the original mono analog, plus period-correct mods (extra LFO, sample-and-hold, note priority, legato, velocity).',
+    sonicCharacter:
+      'Fat, growling Moog bass and lead with midrange punch, sumptuous low end, and the grit of driving the ladder into itself—the classic Minimoog perfume rather than a polite analog clone.',
+    bestFor:
+      'Mono analog basses, expressive leads, and anything that should sound like a Minimoog in the mix.',
+    useCases: [
+      'Resonant 16th-note basslines that still read on a small speaker.',
+      'Pitch-bent lead over a sparse beat.',
+      'Loop output-to-input style drive for aggressive mono layers.',
+    ],
+    notes:
+      'Runs native (no Apollo required). Also known as UAD Minimoog; authorized via UA Connect / iLok.',
+    tags: ['uad', 'moog', 'minimoog', 'analog', 'ladder'],
+    installHints: ['UAD Moog Minimoog', 'UAD Minimoog', 'Minimoog'],
+  },
+  {
+    id: 'fabfilter-twin-3',
+    name: 'Twin 3',
+    vendor: 'FabFilter',
+    kind: 'plugin',
+    types: ['Synth'],
+    collections: [],
+    summary:
+      'Virtual-analog subtractive synth with up to four analog-modeled oscillators (drift, hard sync, ring mod), four nonlinear self-oscillating filters (Volcano-style shapes/slopes), arpeggiator, six FX, 64-voice polyphony/unison, and drag-and-drop modulation including XY.',
+    sonicCharacter:
+      'Phat vintage-analog oscillators with filter grit from smooth rolls to screaming self-oscillation—more “programmable analog poly” than a single hardware clone. FX and modulation push it into designed electronic territory.',
+    bestFor:
+      'Analog-style basses, leads, pads, and unison stabs when you want FabFilter’s filter/modulation workflow on an instrument.',
+    useCases: [
+      'Unison saw bass with filter envelope and a little drift.',
+      'Resonant lead using self-oscillating filters and polyphonic portamento.',
+      'Pad with chorus/reverb in the onboard FX and slow XY filter movement.',
+    ],
+    tags: ['synth', 'analog', 'fabfilter', 'subtractive'],
+  },
 ]

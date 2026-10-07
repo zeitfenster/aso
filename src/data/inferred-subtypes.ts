@@ -22,6 +22,7 @@ export const INFERRED_SUBTYPES: Record<string, PluginSubtype[]> = {
   'waves-eddie-kramer-drum-channel': ['Console / channel'],
   'waves-renaissance-vox': ['Multi-mode'],
   'pa-bx-masterdesk': ['Multi-mode'],
+  'pa-bx-masterdesk-true-peak': ['Multi-mode'],
   'pa-dsm-v3': ['Multi-mode'],
 
   // --- Limiters ---
@@ -77,6 +78,7 @@ export const INFERRED_SUBTYPES: Record<string, PluginSubtype[]> = {
   'waves-cobalt-saphira': ['Multi-mode'],
   'ni-dirt': ['Multi-mode'],
   'pa-bx-xl-v2': ['Multi-mode'],
+  'moog-mf-109s': ['Multi-mode'],
 
   // --- Synths / sample instruments ---
   'ni-reaktor-spark': ['Multi-mode'],

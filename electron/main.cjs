@@ -16,11 +16,21 @@ if (!electron || typeof electron !== 'object' || !electron.app) {
   process.exit(1);
 }
 
-const { app, BrowserWindow, ipcMain, Menu, nativeImage } = electron;
+const { app, BrowserWindow, ipcMain, Menu, nativeImage, screen } = electron;
 const path = require('node:path');
 const fs = require('node:fs');
-const { getWindowAppearance, setWindowAppearance } = require('./settings.cjs');
+const {
+  getWindowAppearance,
+  setWindowAppearance,
+  setWindowState,
+  getInstallScan,
+  setInstallScan,
+  WINDOW_SCALES,
+  MIN_WINDOW_WIDTH,
+  MIN_WINDOW_HEIGHT,
+} = require('./settings.cjs');
 const { getLibrary, setLibrary } = require('./library.cjs');
+const { scanInstalled } = require('./install-scan.cjs');
 
 const isDev = process.env.ELECTRON_DEV === '1';
 const isMac = process.platform === 'darwin';
@@ -109,9 +119,21 @@ function buildApplicationMenu() {
         { role: 'forceReload' },
         { role: 'toggleDevTools' },
         { type: 'separator' },
-        { role: 'resetZoom' },
-        { role: 'zoomIn' },
-        { role: 'zoomOut' },
+        {
+          label: 'Actual Size',
+          accelerator: 'CmdOrCtrl+0',
+          click: () => applySavedScale(100),
+        },
+        {
+          label: 'Zoom In',
+          accelerator: 'CmdOrCtrl+Plus',
+          click: () => stepSavedScale(1),
+        },
+        {
+          label: 'Zoom Out',
+          accelerator: 'CmdOrCtrl+-',
+          click: () => stepSavedScale(-1),
+        },
         { type: 'separator' },
         { role: 'togglefullscreen' },
       ],
@@ -131,15 +153,115 @@ function buildApplicationMenu() {
   Menu.setApplicationMenu(Menu.buildFromTemplate(template));
 }
 
+function debounce(fn, ms) {
+  let timer = null;
+  return (...args) => {
+    if (timer) clearTimeout(timer);
+    timer = setTimeout(() => {
+      timer = null;
+      fn(...args);
+    }, ms);
+  };
+}
+
+function clampBoundsToDisplay(bounds) {
+  const display = screen.getDisplayMatching(bounds);
+  const area = display.workArea;
+  const width = Math.min(
+    Math.max(bounds.width, MIN_WINDOW_WIDTH),
+    Math.max(MIN_WINDOW_WIDTH, area.width),
+  );
+  const height = Math.min(
+    Math.max(bounds.height, MIN_WINDOW_HEIGHT),
+    Math.max(MIN_WINDOW_HEIGHT, area.height),
+  );
+  const maxX = area.x + Math.max(0, area.width - width);
+  const maxY = area.y + Math.max(0, area.height - height);
+  const x = Math.min(Math.max(bounds.x, area.x), maxX);
+  const y = Math.min(Math.max(bounds.y, area.y), maxY);
+  return { x, y, width, height };
+}
+
+function persistWindowState(win) {
+  if (!win || win.isDestroyed()) return;
+  const maximized = win.isMaximized();
+  if (win.isMinimized()) {
+    setWindowState({ maximized });
+    return;
+  }
+  if (maximized || win.isFullScreen()) {
+    setWindowState({ maximized: true });
+    return;
+  }
+  setWindowState({ bounds: win.getBounds(), maximized: false });
+}
+
+const persistWindowStateSoon = debounce(persistWindowState, 250);
+
+function applyZoom(win, scale) {
+  if (!win || win.isDestroyed()) return;
+  try {
+    win.webContents.setZoomFactor(scale / 100);
+  } catch (err) {
+    console.error('[aso] setZoomFactor failed:', err?.message || err);
+  }
+}
+
+function applyAppearanceToWindow(win, appearance, { resize = false } = {}) {
+  if (!win || win.isDestroyed()) return;
+  if (resize) {
+    try {
+      if (win.isMaximized()) win.unmaximize();
+      const current = win.getBounds();
+      const next = clampBoundsToDisplay({
+        x: current.x,
+        y: current.y,
+        width: appearance.width,
+        height: appearance.height,
+      });
+      win.setBounds(next);
+      persistWindowState(win);
+    } catch (err) {
+      console.error('[aso] setBounds failed:', err?.message || err);
+    }
+  }
+  applyZoom(win, appearance.scale);
+}
+
+function applySavedScale(scale) {
+  const appearance = setWindowAppearance({ scale });
+  applyAppearanceToWindow(getMainWindow(), appearance);
+}
+
+function stepSavedScale(direction) {
+  const current = getWindowAppearance().scale;
+  const ids = WINDOW_SCALES.map((option) => option.id);
+  const index = ids.indexOf(current);
+  const nextIndex = Math.max(
+    0,
+    Math.min(ids.length - 1, (index === -1 ? ids.indexOf(100) : index) + direction),
+  );
+  applySavedScale(ids[nextIndex]);
+}
+
 function createWindow() {
   const appearance = getWindowAppearance();
-  const icon = getAppIconImage();
-  const win = new BrowserWindow({
+  const hasPosition =
+    Number.isFinite(appearance.x) && Number.isFinite(appearance.y);
+  const bounds = clampBoundsToDisplay({
+    x: hasPosition ? appearance.x : 0,
+    y: hasPosition ? appearance.y : 0,
     width: appearance.width,
     height: appearance.height,
-    minWidth: 1100,
-    minHeight: 700,
-    title: 'Audio Software Overview',
+  });
+  const icon = getAppIconImage();
+  const win = new BrowserWindow({
+    width: bounds.width,
+    height: bounds.height,
+    minWidth: MIN_WINDOW_WIDTH,
+    minHeight: MIN_WINDOW_HEIGHT,
+    ...(hasPosition ? { x: bounds.x, y: bounds.y } : {}),
+    title: 'ASO',
     backgroundColor: '#121314',
     ...(icon ? { icon } : {}),
     show: false,
@@ -152,15 +274,24 @@ function createWindow() {
     },
   });
 
-  win.center();
+  if (!hasPosition) win.center();
+  else win.setBounds(bounds);
+
+  win.on('resize', () => persistWindowStateSoon(win));
+  win.on('move', () => persistWindowStateSoon(win));
+  win.on('maximize', () => persistWindowState(win));
+  win.on('unmaximize', () => persistWindowState(win));
+  win.on('close', () => persistWindowState(win));
+
+  if (appearance.maximized) {
+    win.once('ready-to-show', () => {
+      if (!win.isDestroyed()) win.maximize();
+    });
+  }
 
   const reveal = () => {
     if (win.isDestroyed() || win.isVisible()) return;
-    try {
-      win.webContents.setZoomFactor(appearance.scale / 100);
-    } catch {
-      // ignore
-    }
+    applyZoom(win, appearance.scale);
     win.show();
     win.focus();
   };
@@ -183,21 +314,6 @@ function createWindow() {
   }
 }
 
-function applyAppearanceToWindow(win, appearance) {
-  if (!win || win.isDestroyed()) return;
-  try {
-    win.setSize(appearance.width, appearance.height);
-    win.center();
-  } catch (err) {
-    console.error('[aso] setSize failed:', err?.message || err);
-  }
-  try {
-    win.webContents.setZoomFactor(appearance.scale / 100);
-  } catch (err) {
-    console.error('[aso] setZoomFactor failed:', err?.message || err);
-  }
-}
-
 function applyDockIcon() {
   if (process.platform !== 'darwin' || !app.dock) return;
   const image = getAppIconImage();
@@ -205,11 +321,11 @@ function applyDockIcon() {
 }
 
 if (isMac) {
-  app.setName('Audio Software Overview');
+  app.setName('ASO');
 }
 
 app.setAboutPanelOptions({
-  applicationName: 'Audio Software Overview',
+  applicationName: 'ASO',
   applicationVersion: app.getVersion(),
   copyright: 'Copyright © Nikos',
 });
@@ -228,6 +344,10 @@ app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit();
 });
 
+app.on('before-quit', () => {
+  persistWindowState(getMainWindow());
+});
+
 ipcMain.handle('app:getVersion', () => app.getVersion());
 
 ipcMain.handle('window:getAppearance', () => {
@@ -242,6 +362,15 @@ ipcMain.handle('library:set', (_event, payload) => {
   return { ok: true, library: setLibrary(payload) };
 });
 
+ipcMain.handle('install:get', () => {
+  return { ok: true, scan: getInstallScan() };
+});
+
+ipcMain.handle('install:scan', () => {
+  const scan = scanInstalled();
+  return { ok: true, scan: setInstallScan(scan) };
+});
+
 ipcMain.handle('window:setAppearance', (event, payload) => {
   const appearance = setWindowAppearance({
     resolution: payload?.resolution,
@@ -253,6 +382,8 @@ ipcMain.handle('window:setAppearance', (event, payload) => {
     BrowserWindow.getFocusedWindow() ||
     BrowserWindow.getAllWindows()[0] ||
     null;
-  applyAppearanceToWindow(win, appearance);
+  applyAppearanceToWindow(win, appearance, {
+    resize: Boolean(payload?.resolution) && payload.resolution !== 'custom',
+  });
   return { ok: true, ...appearance };
 });

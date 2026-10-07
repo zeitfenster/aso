@@ -19,6 +19,7 @@ export type PluginType =
   | 'Pitch / Harmony'
   | 'Enhancer'
   | 'Vocal Suite'
+  | 'De-esser'
   | 'Mixing Suite'
   | 'Mastering Suite'
   | 'Creative FX'
@@ -92,6 +93,10 @@ export type PluginSubtype = (typeof PLUGIN_SUBTYPES)[number]
 /** How the subtype was assigned. Empty subtypes have no origin. */
 export type SubtypeOrigin = 'vendor' | 'inferred'
 
+export const CHAIN_POSITIONS = ['Insert', 'Send', 'Bus', 'Master'] as const
+
+export type ChainPosition = (typeof CHAIN_POSITIONS)[number]
+
 export interface CatalogEntry {
   id: string
   name: string
@@ -106,10 +111,15 @@ export interface CatalogEntry {
   useCases: string[]
   notes?: string
   tags: string[]
+  /** Extra filenames/stems to match on disk (VST/AU/app), besides vendor + name. */
+  installHints?: string[]
   /** Architecture class. Omitted/empty = unspecified. */
   subtypes?: PluginSubtype[]
   /** vendor = named circuit/model. inferred = common classification, not a spec. */
   subtypeOrigin?: SubtypeOrigin
+  /** Typical chain place. Omitted/empty = unspecified. */
+  chainPositions?: ChainPosition[]
+  chainOrigin?: SubtypeOrigin
 }
 
 export const COLLECTION_NAMES = [

@@ -1,5 +1,7 @@
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 import { catalog, type CatalogEntry } from './data';
+import { similarEntries } from './data/similar';
+import ChainsOverlay from './ChainsOverlay';
 import CompareOverlay from './CompareOverlay';
 import DefaultsOverlay from './DefaultsOverlay';
 import Hint from './Hint';
@@ -7,16 +9,31 @@ import PluginJournal from './PluginJournal';
 import PreferencesOverlay, { type ThemeName } from './PreferencesOverlay';
 import { journalOf } from './library/storage';
 import {
+  chainHaystack,
+  chainsForPlugin,
   defaultSlotFor,
   journalHaystack,
+  MAX_CHAIN_STEPS,
 } from './library/types';
 import { useLibrary } from './library/useLibrary';
+import {
+  INSTALL_FILTERS,
+  installFilterId,
+  installLabel,
+  installReasonText,
+  isHiddenByInstallPrefs,
+  matchesInstallFilter,
+} from './install/match';
+import { useInstallScan } from './install/useInstallScan';
+import type { InstallInfo } from './install/types';
 import appLogo from './assets/aso-mark.svg';
 import './App.css';
 
 type SortMode = 'name' | 'vendor' | 'type';
 
 const THEME_STORAGE_KEY = 'aso-theme';
+const HIDE_WAVES_KEY = 'aso-hide-waves-shell';
+const HIDE_KONTAKT_KEY = 'aso-hide-kontakt-libraries';
 const ALL = 'All';
 const UNSPECIFIED = 'Unspecified';
 const INFERRED = 'Inferred';
@@ -26,8 +43,16 @@ function entrySubtypes(entry: CatalogEntry) {
   return entry.subtypes ?? [];
 }
 
+function entryChain(entry: CatalogEntry) {
+  return entry.chainPositions ?? [];
+}
+
 function isInferred(entry: CatalogEntry) {
   return entry.subtypeOrigin === 'inferred';
+}
+
+function isChainInferred(entry: CatalogEntry) {
+  return entry.chainOrigin === 'inferred';
 }
 
 function readStoredTheme(): ThemeName {
@@ -54,6 +79,7 @@ function matchesQuery(entry: CatalogEntry, q: string, extra: string[] = []): boo
     ...entry.collections,
     ...entry.tags,
     ...entry.useCases,
+    ...entryChain(entry),
     ...extra,
   ]
     .join(' ')
@@ -72,7 +98,23 @@ function kindLabel(kind: CatalogEntry['kind']) {
   return 'Plugin';
 }
 
-type FilterKey = 'query' | 'type' | 'vendor' | 'collection' | 'kind' | 'subtype';
+type FilterKey =
+  | 'query'
+  | 'type'
+  | 'vendor'
+  | 'collection'
+  | 'kind'
+  | 'subtype'
+  | 'chain'
+  | 'install';
+
+function readStoredFlag(key: string): boolean {
+  try {
+    return localStorage.getItem(key) === '1';
+  } catch {
+    return false;
+  }
+}
 
 function matchesFilters(
   entry: CatalogEntry,
@@ -83,9 +125,14 @@ function matchesFilters(
     collection: string;
     kind: string;
     subtype: string;
+    chain: string;
+    install: string;
+    hideWaves: boolean;
+    hideKontakt: boolean;
   },
   omit?: FilterKey,
   extra: string[] = [],
+  installOf?: (id: string) => InstallInfo,
 ) {
   if (omit !== 'query' && !matchesQuery(entry, filters.query, extra)) return false;
   if (
@@ -118,6 +165,31 @@ function matchesFilters(
       return false;
     }
   }
+  if (omit !== 'chain' && filters.chain !== ALL) {
+    const positions = entryChain(entry);
+    if (filters.chain === UNSPECIFIED) {
+      if (positions.length > 0) return false;
+    } else if (filters.chain === INFERRED) {
+      if (entry.chainOrigin !== 'inferred') return false;
+    } else if (!positions.some((position) => position === filters.chain)) {
+      return false;
+    }
+  }
+  const install = installOf?.(entry.id);
+  if (omit !== 'install' && filters.install !== ALL) {
+    if (!install || !matchesInstallFilter(install, filters.install)) return false;
+  }
+  if (
+    install &&
+    isHiddenByInstallPrefs(
+      install,
+      filters.hideWaves,
+      filters.hideKontakt,
+      filters.install,
+    )
+  ) {
+    return false;
+  }
   return true;
 }
 
@@ -133,6 +205,7 @@ export default function App() {
   const [collectionFilter, setCollectionFilter] = useState(ALL);
   const [kindFilter, setKindFilter] = useState(ALL);
   const [subtypeFilter, setSubtypeFilter] = useState(ALL);
+  const [chainFilter, setChainFilter] = useState(ALL);
   const [sortMode, setSortMode] = useState<SortMode>('name');
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [compareIds, setCompareIds] = useState<string[]>([]);
@@ -140,7 +213,16 @@ export default function App() {
   const [theme, setTheme] = useState<ThemeName>(readStoredTheme);
   const [prefsOpen, setPrefsOpen] = useState(false);
   const [defaultsOpen, setDefaultsOpen] = useState(false);
+  const [chainsOpen, setChainsOpen] = useState(false);
+  const [focusChainId, setFocusChainId] = useState<string | null>(null);
+  const [recipeFilter, setRecipeFilter] = useState<string | null>(null);
   const [shortlistOnly, setShortlistOnly] = useState(false);
+  const [installFilter, setInstallFilter] = useState(ALL);
+  const [hideWaves, setHideWaves] = useState(() => readStoredFlag(HIDE_WAVES_KEY));
+  const [hideKontakt, setHideKontakt] = useState(() =>
+    readStoredFlag(HIDE_KONTAKT_KEY),
+  );
+  const { snapshot, scanning, available, rescan, infoFor } = useInstallScan();
   const selectedRowRef = useRef<HTMLTableRowElement | null>(null);
   const {
     library,
@@ -149,6 +231,18 @@ export default function App() {
     toggleShortlist,
     setDefault,
     assignDefaultSlot,
+    addSlot,
+    renameSlot,
+    removeSlot,
+    addChain,
+    renameChain,
+    setChainWhen,
+    removeChain,
+    duplicateChain,
+    addStep,
+    updateStep,
+    moveStep,
+    removeStep,
     touchRecent,
   } = useLibrary();
 
@@ -160,23 +254,40 @@ export default function App() {
       collection: collectionFilter,
       kind: kindFilter,
       subtype: subtypeFilter,
+      chain: chainFilter,
+      install: installFilter,
+      hideWaves,
+      hideKontakt,
     }),
-    [deferredQuery, typeFilter, vendorFilter, collectionFilter, kindFilter, subtypeFilter],
+    [
+      deferredQuery,
+      typeFilter,
+      vendorFilter,
+      collectionFilter,
+      kindFilter,
+      subtypeFilter,
+      chainFilter,
+      installFilter,
+      hideWaves,
+      hideKontakt,
+    ],
   );
 
-  const extrasFor = (entry: CatalogEntry) =>
-    journalHaystack(library.plugins[entry.id]);
+  const extrasFor = (entry: CatalogEntry) => [
+    ...journalHaystack(library.plugins[entry.id]),
+    ...chainHaystack(library, entry.id),
+  ];
 
   const typeOptions = useMemo(
     () =>
       uniqueSorted(
         catalog
           .filter((entry) =>
-            matchesFilters(entry, currentFilters, 'type', extrasFor(entry)),
+            matchesFilters(entry, currentFilters, 'type', extrasFor(entry), infoFor),
           )
           .flatMap((entry) => entry.types),
       ),
-    [currentFilters, library.plugins],
+    [currentFilters, library, infoFor],
   );
 
   const vendorOptions = useMemo(
@@ -184,11 +295,11 @@ export default function App() {
       uniqueSorted(
         catalog
           .filter((entry) =>
-            matchesFilters(entry, currentFilters, 'vendor', extrasFor(entry)),
+            matchesFilters(entry, currentFilters, 'vendor', extrasFor(entry), infoFor),
           )
           .map((entry) => entry.vendor),
       ),
-    [currentFilters, library.plugins],
+    [currentFilters, library, infoFor],
   );
 
   const collectionOptions = useMemo(
@@ -196,11 +307,11 @@ export default function App() {
       uniqueSorted(
         catalog
           .filter((entry) =>
-            matchesFilters(entry, currentFilters, 'collection', extrasFor(entry)),
+            matchesFilters(entry, currentFilters, 'collection', extrasFor(entry), infoFor),
           )
           .flatMap((entry) => entry.collections),
       ),
-    [currentFilters, library.plugins],
+    [currentFilters, library, infoFor],
   );
 
   const kindOptions = useMemo(() => {
@@ -208,20 +319,20 @@ export default function App() {
       new Set(
         catalog
           .filter((entry) =>
-            matchesFilters(entry, currentFilters, 'kind', extrasFor(entry)),
+            matchesFilters(entry, currentFilters, 'kind', extrasFor(entry), infoFor),
           )
           .map((entry) => entry.kind),
       ),
     );
     return kinds.sort((a, b) => kindLabel(a).localeCompare(kindLabel(b)));
-  }, [currentFilters, library.plugins]);
+  }, [currentFilters, library, infoFor]);
 
   const subtypePool = useMemo(
     () =>
       catalog.filter((entry) =>
-        matchesFilters(entry, currentFilters, 'subtype', extrasFor(entry)),
+        matchesFilters(entry, currentFilters, 'subtype', extrasFor(entry), infoFor),
       ),
-    [currentFilters, library.plugins],
+    [currentFilters, library, infoFor],
   );
 
   const subtypeOptions = useMemo(
@@ -239,12 +350,49 @@ export default function App() {
     [subtypePool],
   );
 
+  const chainPool = useMemo(
+    () =>
+      catalog.filter((entry) =>
+        matchesFilters(entry, currentFilters, 'chain', extrasFor(entry), infoFor),
+      ),
+    [currentFilters, library, infoFor],
+  );
+
+  const chainOptions = useMemo(
+    () => uniqueSorted(chainPool.flatMap((entry) => entryChain(entry))),
+    [chainPool],
+  );
+
+  const hasUnspecifiedChain = useMemo(
+    () => chainPool.some((entry) => entryChain(entry).length === 0),
+    [chainPool],
+  );
+
+  const hasInferredChain = useMemo(
+    () => chainPool.some((entry) => isChainInferred(entry)),
+    [chainPool],
+  );
+
   const filtered = useMemo(() => {
     let list = catalog.filter((entry) =>
-      matchesFilters(entry, currentFilters, undefined, extrasFor(entry)),
+      matchesFilters(entry, currentFilters, undefined, extrasFor(entry), infoFor),
     );
     if (shortlistOnly) {
       list = list.filter((entry) => library.plugins[entry.id]?.shortlisted);
+    }
+    const recipe = recipeFilter
+      ? library.chains.find((chain) => chain.id === recipeFilter)
+      : null;
+    if (recipeFilter) {
+      const order: string[] = [];
+      for (const step of recipe?.steps ?? []) {
+        if (!order.includes(step.pluginId)) order.push(step.pluginId);
+      }
+      const rank = new Map(order.map((id, index) => [id, index]));
+      list = list.filter((entry) => rank.has(entry.id));
+      return [...list].sort(
+        (a, b) => (rank.get(a.id) ?? 0) - (rank.get(b.id) ?? 0),
+      );
     }
 
     return [...list].sort((a, b) => {
@@ -259,7 +407,7 @@ export default function App() {
       }
       return a.name.localeCompare(b.name);
     });
-  }, [currentFilters, sortMode, shortlistOnly, library.plugins]);
+  }, [currentFilters, sortMode, shortlistOnly, recipeFilter, library, infoFor]);
 
   const selected =
     (selectedId
@@ -272,6 +420,13 @@ export default function App() {
   const selectedDefaultSlot = selected
     ? defaultSlotFor(library, selected.id)
     : null;
+  const selectedChains = selected ? chainsForPlugin(library, selected.id) : [];
+  const selectedInstall = selected ? infoFor(selected.id) : null;
+
+  const similar = useMemo(
+    () => (selected ? similarEntries(selected, catalog) : { curated: [], computed: [] }),
+    [selected],
+  );
 
   const recentEntries = useMemo(
     () =>
@@ -334,6 +489,14 @@ export default function App() {
         clear: () => setSubtypeFilter(ALL),
       });
     }
+    if (chainFilter !== ALL) {
+      chips.push({
+        key: 'chain',
+        label: 'Chain',
+        value: chainFilter,
+        clear: () => setChainFilter(ALL),
+      });
+    }
     if (kindFilter !== ALL) {
       chips.push({
         key: 'kind',
@@ -358,6 +521,30 @@ export default function App() {
         clear: () => setCollectionFilter(ALL),
       });
     }
+    if (installFilter !== ALL) {
+      chips.push({
+        key: 'install',
+        label: 'On disk',
+        value: installFilter,
+        clear: () => setInstallFilter(ALL),
+      });
+    }
+    if (hideWaves) {
+      chips.push({
+        key: 'hide-waves',
+        label: 'Hidden',
+        value: 'Waves',
+        clear: () => setHideWaves(false),
+      });
+    }
+    if (hideKontakt) {
+      chips.push({
+        key: 'hide-kontakt',
+        label: 'Hidden',
+        value: 'Kontakt',
+        clear: () => setHideKontakt(false),
+      });
+    }
     if (shortlistOnly) {
       chips.push({
         key: 'shortlist',
@@ -366,15 +553,30 @@ export default function App() {
         clear: () => setShortlistOnly(false),
       });
     }
+    if (recipeFilter) {
+      const recipe = library.chains.find((chain) => chain.id === recipeFilter);
+      chips.push({
+        key: 'stack',
+        label: 'Stack',
+        value: recipe?.label ?? recipeFilter,
+        clear: () => setRecipeFilter(null),
+      });
+    }
     return chips;
   }, [
     query,
     kindFilter,
     typeFilter,
     subtypeFilter,
+    chainFilter,
     vendorFilter,
     collectionFilter,
+    installFilter,
+    hideWaves,
+    hideKontakt,
     shortlistOnly,
+    recipeFilter,
+    library.chains,
   ]);
 
   useEffect(() => {
@@ -414,6 +616,22 @@ export default function App() {
   }, [subtypeFilter, subtypeOptions, hasUnspecifiedSubtypes, hasInferredSubtypes]);
 
   useEffect(() => {
+    if (chainFilter === ALL) return;
+    const valid =
+      (chainFilter === UNSPECIFIED && hasUnspecifiedChain) ||
+      (chainFilter === INFERRED && hasInferredChain) ||
+      chainOptions.includes(chainFilter);
+    if (!valid) setChainFilter(ALL);
+  }, [chainFilter, chainOptions, hasUnspecifiedChain, hasInferredChain]);
+
+  useEffect(() => {
+    if (!recipeFilter) return;
+    if (!library.chains.some((chain) => chain.id === recipeFilter)) {
+      setRecipeFilter(null);
+    }
+  }, [recipeFilter, library.chains]);
+
+  useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
     try {
       localStorage.setItem(THEME_STORAGE_KEY, theme);
@@ -421,6 +639,24 @@ export default function App() {
       /* ignore */
     }
   }, [theme]);
+
+  useEffect(() => {
+    try {
+      if (hideWaves) localStorage.setItem(HIDE_WAVES_KEY, '1');
+      else localStorage.removeItem(HIDE_WAVES_KEY);
+    } catch {
+      /* ignore */
+    }
+  }, [hideWaves]);
+
+  useEffect(() => {
+    try {
+      if (hideKontakt) localStorage.setItem(HIDE_KONTAKT_KEY, '1');
+      else localStorage.removeItem(HIDE_KONTAKT_KEY);
+    } catch {
+      /* ignore */
+    }
+  }, [hideKontakt]);
 
   useEffect(() => {
     const unsubscribe = window.asoApi?.onMenuCommand?.((payload) => {
@@ -442,6 +678,13 @@ export default function App() {
         if (event.key === 'Escape') {
           event.preventDefault();
           setDefaultsOpen(false);
+        }
+        return;
+      }
+      if (chainsOpen) {
+        if (event.key === 'Escape') {
+          event.preventDefault();
+          setChainsOpen(false);
         }
         return;
       }
@@ -475,7 +718,7 @@ export default function App() {
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [filtered, selected, prefsOpen, defaultsOpen, compareOpen, touchRecent]);
+  }, [filtered, selected, prefsOpen, defaultsOpen, chainsOpen, compareOpen, touchRecent]);
 
   useEffect(() => {
     selectedRowRef.current?.scrollIntoView({ block: 'nearest' });
@@ -505,7 +748,7 @@ export default function App() {
               <p>Licensed plugins, types, and when to reach for them</p>
             </div>
           </div>
-          <Hint text="Window size, scaling, and color theme. Also under Audio Software Overview → Preferences.">
+          <Hint text="Window size, scaling, and color theme. Also under ASO → Preferences.">
             <button
               type="button"
               className="btn ghost topbar-pref-btn"
@@ -571,6 +814,29 @@ export default function App() {
                   </Hint>
                 </label>
                 <label className="toolbar-filter-field">
+                  <span className="toolbar-filter-label">Chain</span>
+                  <Hint text="Typical place in a mix: insert, send, bus, or master. Vendor spec = named bus compressor, console channel, or mastering desk. Inferred = from type. Unspecified = instruments, meters, hosts.">
+                    <select
+                      className="toolbar-filter-select"
+                      value={chainFilter}
+                      onChange={(event) => setChainFilter(event.target.value)}
+                    >
+                      <option>{ALL}</option>
+                      {hasUnspecifiedChain ? (
+                        <option value={UNSPECIFIED}>{UNSPECIFIED}</option>
+                      ) : null}
+                      {hasInferredChain ? (
+                        <option value={INFERRED}>{INFERRED}</option>
+                      ) : null}
+                      {chainOptions.map((position) => (
+                        <option key={position} value={position}>
+                          {position}
+                        </option>
+                      ))}
+                    </select>
+                  </Hint>
+                </label>
+                <label className="toolbar-filter-field">
                   <span className="toolbar-filter-label">Vendor</span>
                   <select
                     className="toolbar-filter-select"
@@ -616,6 +882,23 @@ export default function App() {
                   </select>
                 </label>
                 <label className="toolbar-filter-field">
+                  <span className="toolbar-filter-label">On disk</span>
+                  <Hint text="Installed = a matching VST/AU/app file. Missing = no file. Waves and Kontakt are listed separately because they are not individual plugin files. Unknown is everything else this scan cannot prove. Hide Waves or Kontakt libraries in Preferences if you don’t want them in the main list.">
+                    <select
+                      className="toolbar-filter-select"
+                      value={installFilter}
+                      onChange={(event) => setInstallFilter(event.target.value)}
+                    >
+                      <option>{ALL}</option>
+                      {INSTALL_FILTERS.map((item) => (
+                        <option key={item} value={item}>
+                          {item}
+                        </option>
+                      ))}
+                    </select>
+                  </Hint>
+                </label>
+                <label className="toolbar-filter-field">
                   <span className="toolbar-filter-label">Sort</span>
                   <select
                     className="toolbar-filter-select"
@@ -629,6 +912,26 @@ export default function App() {
                     <option value="type">Type</option>
                   </select>
                 </label>
+                <Hint
+                  text={
+                    available
+                      ? snapshot?.scannedAt
+                        ? `Last scan ${new Date(snapshot.scannedAt).toLocaleString()}. Walks VST2, VST3, AU, and Applications folders.`
+                        : 'Walks VST2, VST3, AU, and Applications folders on this Mac.'
+                      : 'Install check runs in the ASO desktop app, not the browser preview.'
+                  }
+                >
+                  <button
+                    type="button"
+                    className="btn ghost toolbar-compare-btn"
+                    disabled={!available || scanning}
+                    onClick={() => {
+                      void rescan();
+                    }}
+                  >
+                    {scanning ? 'Scanning…' : snapshot ? 'Rescan' : 'Scan disks'}
+                  </button>
+                </Hint>
                 <Hint text="Tick 2 or 3 rows, then compare architecture and notes side by side.">
                   <button
                     type="button"
@@ -656,6 +959,18 @@ export default function App() {
                     onClick={() => setDefaultsOpen(true)}
                   >
                     Defaults
+                  </button>
+                </Hint>
+                <Hint text="Named plugin stacks for a specific source, like a rap vocal or analog synth.">
+                  <button
+                    type="button"
+                    className={`btn ghost toolbar-compare-btn${recipeFilter ? ' is-on' : ''}`}
+                    onClick={() => {
+                      setFocusChainId(recipeFilter);
+                      setChainsOpen(true);
+                    }}
+                  >
+                    Chains
                   </button>
                 </Hint>
               </div>
@@ -729,6 +1044,7 @@ export default function App() {
                     const inCompare = compareIds.includes(entry.id);
                     const compareFull = !inCompare && compareIds.length >= MAX_COMPARE;
                     const subtypes = entrySubtypes(entry);
+                    const install = infoFor(entry.id);
                     return (
                       <tr
                         key={entry.id}
@@ -755,6 +1071,11 @@ export default function App() {
                               {library.plugins[entry.id]?.shortlisted ? (
                                 <span className="badge latest-badge">Shortlist</span>
                               ) : null}
+                              <span
+                                className={`badge install-row-badge is-${install.status}`}
+                              >
+                                {installLabel(install)}
+                              </span>
                             </div>
                             <span className="summary">{entry.summary}</span>
                           </div>
@@ -799,6 +1120,51 @@ export default function App() {
                   <p className="detail-path">{selected.vendor}</p>
                   <h2>{selected.name}</h2>
                 </header>
+                {selectedInstall ? (
+                  <>
+                    <div className="chip-row">
+                      <button
+                        type="button"
+                        className={`badge filter-chip install-status-badge is-${selectedInstall.status}`}
+                          onClick={() =>
+                            setInstallFilter(installFilterId(selectedInstall))
+                          }
+                      >
+                        {installLabel(selectedInstall)}
+                      </button>
+                      {selected.kind === 'host' || selected.kind === 'application' ? (
+                        <span
+                          className={`badge install-format${selectedInstall.formats.app ? ' is-on' : ' is-off'}`}
+                        >
+                          App
+                        </span>
+                      ) : (
+                        <>
+                          <span
+                            className={`badge install-format${selectedInstall.formats.vst2 ? ' is-on' : ' is-off'}`}
+                          >
+                            VST2
+                          </span>
+                          <span
+                            className={`badge install-format${selectedInstall.formats.vst3 ? ' is-on' : ' is-off'}`}
+                          >
+                            VST3
+                          </span>
+                          <span
+                            className={`badge install-format${selectedInstall.formats.au ? ' is-on' : ' is-off'}`}
+                          >
+                            AU
+                          </span>
+                        </>
+                      )}
+                    </div>
+                    {installReasonText(selectedInstall) ? (
+                      <p className="muted detail-subtype-note">
+                        {installReasonText(selectedInstall)}
+                      </p>
+                    ) : null}
+                  </>
+                ) : null}
                 <div className="chip-row">
                   {selected.types.map((type) => (
                     <button
@@ -848,11 +1214,46 @@ export default function App() {
                   )}
                 </div>
                 <p className="muted detail-subtype-note">
-                  Vendor spec is a named circuit or modeled unit. Inferred is a
-                  common classification, not a spec sheet. Unspecified means no
-                  architecture class (or not assigned). What it does, character,
-                  and best-for are catalog notes — not vendor copy.
+                  Vendor spec is a named circuit, modeled unit, or named desk/bus
+                  product. Inferred is a common classification, not a spec sheet.
+                  Unspecified means no class yet (meters, hosts, instruments).
+                  Catalog notes are not vendor copy.
                 </p>
+                <div className="chip-row">
+                  {entryChain(selected).length > 0 ? (
+                    <>
+                      {entryChain(selected).map((position) => (
+                        <button
+                          key={position}
+                          type="button"
+                          className="badge latest-badge filter-chip"
+                          onClick={() => setChainFilter(position)}
+                        >
+                          {position}
+                        </button>
+                      ))}
+                      {isChainInferred(selected) ? (
+                        <button
+                          type="button"
+                          className="badge inferred-badge filter-chip"
+                          onClick={() => setChainFilter(INFERRED)}
+                        >
+                          Inferred
+                        </button>
+                      ) : (
+                        <span className="badge">Vendor spec</span>
+                      )}
+                    </>
+                  ) : (
+                    <button
+                      type="button"
+                      className="badge filter-chip"
+                      onClick={() => setChainFilter(UNSPECIFIED)}
+                    >
+                      Chain unspecified
+                    </button>
+                  )}
+                </div>
                 {selected.collections.length > 0 && (
                   <div className="chip-row">
                     {selected.collections.map((collection) => (
@@ -868,9 +1269,110 @@ export default function App() {
                   </div>
                 )}
 
+                {similar.curated.length + similar.computed.length > 0 ? (
+                  <section className="detail-section">
+                    <h3>
+                      <span className="detail-section-title">Similar in this catalog</span>
+                    </h3>
+                    {similar.curated.length > 0 ? (
+                      <div className="similar-block">
+                        <p className="similar-kicker">Instead of / also try</p>
+                        <div className="chip-row">
+                          {similar.curated.map((entry) => (
+                            <button
+                              key={entry.id}
+                              type="button"
+                              className="badge latest-badge filter-chip"
+                              onClick={() => selectPlugin(entry.id)}
+                            >
+                              {entry.name}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    ) : null}
+                    {similar.computed.length > 0 ? (
+                      <div className="similar-block">
+                        {similar.curated.length > 0 ? (
+                          <p className="similar-kicker">Same type and architecture</p>
+                        ) : null}
+                        <div className="chip-row">
+                          {similar.computed.map((entry) => (
+                            <button
+                              key={entry.id}
+                              type="button"
+                              className="badge filter-chip"
+                              onClick={() => selectPlugin(entry.id)}
+                            >
+                              {entry.name}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    ) : null}
+                  </section>
+                ) : null}
+
+                {libraryReady ? (
+                  <section className="detail-section">
+                    <h3>
+                      <span className="detail-section-title">Your chains</span>
+                    </h3>
+                    {selectedChains.length > 0 ? (
+                      <div className="chip-row">
+                        {selectedChains.map((chain) => (
+                          <button
+                            key={chain.id}
+                            type="button"
+                            className={`badge latest-badge filter-chip${recipeFilter === chain.id ? ' is-on' : ''}`}
+                            onClick={() =>
+                              setRecipeFilter((current) =>
+                                current === chain.id ? null : chain.id,
+                              )
+                            }
+                          >
+                            {chain.label}
+                          </button>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="muted">Not in a saved stack yet.</p>
+                    )}
+                    {library.chains.length > 0 ? (
+                      <label className="journal-default-field chain-assign-field">
+                        <span className="journal-field-label">Add to chain</span>
+                        <select
+                          className="journal-select"
+                          value=""
+                          aria-label="Add this plugin to a signal chain"
+                          onChange={(event) => {
+                            const chainId = event.target.value;
+                            if (!chainId || !selected) return;
+                            const chain = library.chains.find((item) => item.id === chainId);
+                            if (!chain || chain.steps.length >= MAX_CHAIN_STEPS) return;
+                            addStep(chainId, selected.id);
+                          }}
+                        >
+                          <option value="">Add to a chain…</option>
+                          {library.chains.map((chain) => (
+                            <option
+                              key={chain.id}
+                              value={chain.id}
+                              disabled={chain.steps.length >= MAX_CHAIN_STEPS}
+                            >
+                              {chain.label}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                    ) : null}
+                  </section>
+                ) : null}
+
                 {libraryReady && selectedJournal ? (
                   <PluginJournal
                     entry={selectedJournal}
+                    slots={library.defaultSlots}
                     defaultSlot={selectedDefaultSlot}
                     onPatch={(patch) => patchPlugin(selected.id, patch)}
                     onToggleShortlist={() => toggleShortlist(selected.id)}
@@ -962,7 +1464,33 @@ export default function App() {
             selectPlugin(pluginId);
             setDefaultsOpen(false);
           }}
+          onAddSlot={addSlot}
+          onRenameSlot={renameSlot}
+          onRemoveSlot={removeSlot}
           onClose={() => setDefaultsOpen(false)}
+        />
+      ) : null}
+
+      {chainsOpen ? (
+        <ChainsOverlay
+          library={library}
+          catalog={catalog}
+          selectedId={selectedId}
+          initialChainId={focusChainId}
+          onAddChain={addChain}
+          onRenameChain={renameChain}
+          onSetWhen={setChainWhen}
+          onRemoveChain={removeChain}
+          onDuplicateChain={duplicateChain}
+          onAddStep={addStep}
+          onUpdateStep={updateStep}
+          onMoveStep={moveStep}
+          onRemoveStep={removeStep}
+          onJump={(pluginId) => {
+            selectPlugin(pluginId);
+            setChainsOpen(false);
+          }}
+          onClose={() => setChainsOpen(false)}
         />
       ) : null}
 
@@ -971,6 +1499,16 @@ export default function App() {
           theme={theme}
           onThemeChange={setTheme}
           onClose={() => setPrefsOpen(false)}
+          installAvailable={available}
+          installScanning={scanning}
+          installScannedAt={snapshot?.scannedAt ?? null}
+          hideWaves={hideWaves}
+          hideKontakt={hideKontakt}
+          onHideWavesChange={setHideWaves}
+          onHideKontaktChange={setHideKontakt}
+          onInstallRescan={() => {
+            void rescan();
+          }}
         />
       ) : null}
     </div>

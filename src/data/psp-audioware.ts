@@ -381,3 +381,46 @@ export const pspAnniversaryBundle: CatalogEntry[] = [
     ['metering'],
   ),
 ]
+
+function pspSolo(
+  id: string,
+  name: string,
+  types: PluginType[],
+  summary: string,
+  sonicCharacter: string,
+  bestFor: string,
+  useCases: string[],
+  tags: string[] = [],
+): CatalogEntry {
+  return {
+    id,
+    name,
+    vendor: 'PSP Audioware',
+    kind: 'plugin',
+    types,
+    collections: [],
+    summary,
+    sonicCharacter,
+    bestFor,
+    useCases,
+    tags: ['psp-audioware', ...tags],
+  }
+}
+
+/** PSP titles licensed separately from the 25th Anniversary Bundle. */
+export const pspStandalone: CatalogEntry[] = [
+  pspSolo(
+    'psp-bbdelay',
+    'BBDelay',
+    ['Delay', 'Reverb'],
+    'Analog-inspired BBD delay and ambience processor modeled on bucket-brigade chips and compander behavior, inspired by the Dynacord VRS 23, with Mono, Dual Mono, Ping-Pong, and Reverb modes plus ducking, gate, dirt, and feedback-path filters.',
+    'Warm, slightly unstable analog repeats that darken and breathe—from clean-ish BBD slap to dirty vintage trails and smeared BBD ambience, not a hi-fi digital delay.',
+    'Vocals, guitars, synths, and drums that need analog echo or short BBD rooms rather than tape or clean multi-tap.',
+    [
+      'Ducked BBD vocal delays that stay out of the dry word.',
+      'Ping-pong or dual-mono analog echoes on guitar or synth.',
+      'Reverb mode as a short analog ambience instead of a hall/plate.',
+    ],
+    ['delay', 'bbd', 'dynacord'],
+  ),
+]

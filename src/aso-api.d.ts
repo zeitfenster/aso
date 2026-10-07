@@ -12,7 +12,28 @@ type UserLibraryPayload = {
     }
   >;
   defaults?: Record<string, string>;
+  defaultSlots?: { id?: string; label?: string }[];
+  chains?: {
+    id?: string;
+    label?: string;
+    when?: string;
+    steps?: {
+      id?: string;
+      pluginId?: string;
+      note?: string;
+      place?: string;
+    }[];
+  }[];
   lastOpened?: string[];
+};
+
+type InstallScanPayload = {
+  scannedAt?: string;
+  platform?: string;
+  vst2?: string[];
+  vst3?: string[];
+  au?: string[];
+  apps?: string[];
 };
 
 type WindowAppearance = {
@@ -21,7 +42,10 @@ type WindowAppearance = {
   scale?: number;
   width?: number;
   height?: number;
-  resolutions?: { id: string; label?: string }[];
+  x?: number;
+  y?: number;
+  maximized?: boolean;
+  resolutions?: { id: string; label?: string; width?: number; height?: number }[];
   scales?: { id: number; label?: string }[];
 };
 
@@ -39,6 +63,14 @@ declare global {
       setLibrary: (
         payload: UserLibraryPayload,
       ) => Promise<{ ok?: boolean; library?: UserLibraryPayload }>;
+      getInstallScan: () => Promise<{
+        ok?: boolean;
+        scan?: InstallScanPayload | null;
+      }>;
+      scanInstall: () => Promise<{
+        ok?: boolean;
+        scan?: InstallScanPayload | null;
+      }>;
       onMenuCommand: (
         callback: (payload: { action: string }) => void,
       ) => () => void;

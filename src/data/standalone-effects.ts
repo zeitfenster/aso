@@ -285,6 +285,46 @@ export const standaloneEffects: CatalogEntry[] = [
     tags: ['delay', 'fabfilter', 'tape'],
   },
   {
+    id: 'fabfilter-pro-ds',
+    name: 'Pro-DS',
+    vendor: 'FabFilter',
+    kind: 'plugin',
+    types: ['De-esser'],
+    collections: [],
+    summary:
+      'Intelligent de-esser with Single Vocal and Allround detection, Wide Band or linear-phase Split Band processing, optional lookahead, mid/side linking, and up to 4× linear-phase oversampling.',
+    sonicCharacter:
+      'Transparent, program-dependent sibilance control—more “the S went away” than a vintage de-esser lisp. Split Band can also act as a high-frequency limiter on mixes.',
+    bestFor:
+      'Lead and backing vocals, plus Allround high-frequency limiting on drums, cymbals, or a master.',
+    useCases: [
+      'Single Vocal + Wide Band on a lead that lisps when a narrow de-esser is pushed.',
+      'Split Band + Allround as a high-frequency limiter on a bright mix or drum bus.',
+      'Mid-only de-ess so stereo air stays while the center S is tamed.',
+    ],
+    tags: ['de-esser', 'fabfilter', 'sibilance', 'vocal'],
+  },
+  {
+    id: 'fabfilter-saturn-2',
+    name: 'Saturn 2',
+    vendor: 'FabFilter',
+    kind: 'plugin',
+    types: ['Saturation / Distortion'],
+    collections: [],
+    summary:
+      'Multiband saturation/distortion with up to six bands and 28 styles: tube, tape, transformer, guitar amps, plus creative FX (Smudge, Breakdown, Foldback, Rectify, Destroy). Per-band drive, dynamics, tone, mix, and deep modulation; linear-phase crossovers and HQ oversampling for mastering.',
+    sonicCharacter:
+      'From subtle mastering-grade tube/tape warmth to screaming amps and digital destruction—character is the style you pick, not one fixed circuit. Multiband lets you dirty mids while keeping sub clean.',
+    bestFor:
+      'Everyday harmonics on vocals, bass, drums, and buses, plus multiband sound-design distortion.',
+    useCases: [
+      'Subtle tape/tube on a mix bus in linear phase.',
+      'Drive only the mid band of a bass so the sub stays round.',
+      'Amp or Destroy styles on a parallel drum bus, envelope-followed.',
+    ],
+    tags: ['saturation', 'distortion', 'multiband', 'fabfilter'],
+  },
+  {
     id: 'minimal-audio-poly-flanger',
     name: 'Poly Flanger',
     vendor: 'Minimal Audio',
@@ -364,5 +404,27 @@ export const standaloneEffects: CatalogEntry[] = [
     ],
     notes: 'Runs as a module inside Slate Digital Virtual Mix Rack.',
     tags: ['exciter', 'slate', 'vmr'],
+  },
+  {
+    id: 'moog-mf-109s',
+    name: 'MF-109S Saturator',
+    vendor: 'Moog',
+    kind: 'plugin',
+    types: ['Saturation / Distortion'],
+    collections: [],
+    summary:
+      'Software-only Moogerfooger: the collection’s analog input-drive stage with a wide-range envelope follower, so drive can go from tight overdrive to compression/expansion. Also models the Minimoog Model D noise generator (level, tone, filter type) with CV I/O to the other MF-S plugs.',
+    sonicCharacter:
+      'Moog analog warmth and crunch—dynamic rather than a static clipper. Noise generator can add grit, hiss, or audio-reactive texture.',
+    bestFor:
+      'Synths, drums, bass, and vocals that need Moogerfooger-style drive, plus envelope-followed saturation or noise.',
+    useCases: [
+      'Envelope-followed overdrive on a bass or drum bus.',
+      'Gentle analog warmth on a synth or vocal.',
+      'Audio-reactive Minimoog-style noise as texture or a CV source into other Moogerfooger plugs.',
+    ],
+    notes: 'Not a delay. Search also matches Moogerfooger / MF109S.',
+    tags: ['moogerfooger', 'moog', 'mf109s', 'drive', 'noise'],
+    installHints: ['MF-109S', 'Moogerfooger MF-109S'],
   },
 ]

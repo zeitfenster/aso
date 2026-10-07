@@ -122,6 +122,31 @@ export default function CompareOverlay({
             );
           })}
 
+          <div className="compare-label">Chain</div>
+          {entries.map((entry, index) => {
+            const positions = entry.chainPositions ?? [];
+            return (
+              <CompareCell key={entry.id} last={index === entries.length - 1}>
+                {positions.length > 0 ? (
+                  <div className="chip-row">
+                    {positions.map((position) => (
+                      <span key={position} className="badge latest-badge">
+                        {position}
+                      </span>
+                    ))}
+                    {entry.chainOrigin === 'inferred' ? (
+                      <span className="badge inferred-badge">Inferred</span>
+                    ) : (
+                      <span className="badge">Vendor spec</span>
+                    )}
+                  </div>
+                ) : (
+                  <p className="muted">Unspecified</p>
+                )}
+              </CompareCell>
+            );
+          })}
+
           <div className="compare-label">What it does</div>
           {entries.map((entry, index) => (
             <CompareCell key={entry.id} last={index === entries.length - 1}>

@@ -6,7 +6,7 @@ export const izotopeEntries: CatalogEntry[] = [
     name: 'Nectar 3',
     vendor: 'iZotope',
     kind: 'plugin',
-    types: ['Vocal Suite', 'EQ', 'Compressor', 'Pitch / Harmony'],
+    types: ['Vocal Suite', 'EQ', 'Compressor', 'De-esser', 'Pitch / Harmony'],
     collections: [],
     summary:
       'All-in-one vocal production suite: EQ, compression, de-essing, harmony, pitch helpers, saturation, and more in a module-based chain.',
@@ -80,6 +80,7 @@ export const izotopeEntries: CatalogEntry[] = [
       'Batch denoise interview/podcast audio before editing in WaveLab or Ableton.',
     ],
     tags: ['restoration', 'rx', 'izotope'],
+    installHints: ['RX 7 Audio Editor', 'iZotope RX 7'],
   },
   {
     id: 'izotope-stutter-edit-2',

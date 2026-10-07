@@ -1,18 +1,20 @@
 import Hint from './Hint';
-import { DEFAULT_SLOTS, type DefaultSlotId, type PluginJournalEntry } from './library/types';
+import type { DefaultSlot, PluginJournalEntry } from './library/types';
 
 export default function PluginJournal({
   entry,
+  slots,
   defaultSlot,
   onPatch,
   onToggleShortlist,
   onAssignDefault,
 }: {
   entry: PluginJournalEntry;
-  defaultSlot: DefaultSlotId | null;
+  slots: DefaultSlot[];
+  defaultSlot: string | null;
   onPatch: (patch: Partial<PluginJournalEntry>) => void;
   onToggleShortlist: () => void;
-  onAssignDefault: (slot: DefaultSlotId | null) => void;
+  onAssignDefault: (slot: string | null) => void;
 }) {
   return (
     <section className="detail-section journal-section">
@@ -39,13 +41,11 @@ export default function PluginJournal({
           <select
             className="journal-select"
             value={defaultSlot ?? ''}
-            onChange={(event) =>
-              onAssignDefault((event.target.value || null) as DefaultSlotId | null)
-            }
+            onChange={(event) => onAssignDefault(event.target.value || null)}
             aria-label="My default slot for this plugin"
           >
             <option value="">Not a default</option>
-            {DEFAULT_SLOTS.map((slot) => (
+            {slots.map((slot) => (
               <option key={slot.id} value={slot.id}>
                 {slot.label}
               </option>

@@ -43,6 +43,7 @@ export const SUBTYPE_ASSIGNMENTS: Record<string, PluginSubtype[]> = {
 
   'fabfilter-pro-c-2': ['Multi-mode'],
   'fabfilter-pro-c-3': ['Multi-mode'],
+  'fabfilter-pro-ds': ['Multi-mode'],
   'waves-h-comp': ['Multi-mode'],
   'waves-renaissance-compressor': ['Multi-mode'],
   'pa-mastering-compressor': ['Multi-mode'],
@@ -59,6 +60,7 @@ export const SUBTYPE_ASSIGNMENTS: Record<string, PluginSubtype[]> = {
   'ni-solid-eq': ['Surgical parametric'],
   'pa-bx-digital-v2': ['Surgical parametric'],
   'pa-bx-digital-v3': ['Surgical parametric'],
+  'pa-hg-q': ['Surgical parametric', 'Tube'],
   'pa-eq-200': ['Surgical parametric'],
   'pa-nseq-2': ['Surgical parametric'],
   'psp-masterq2': ['Surgical parametric'],
@@ -130,6 +132,7 @@ export const SUBTYPE_ASSIGNMENTS: Record<string, PluginSubtype[]> = {
   'arturia-delay-brigade': ['BBD / analog'],
   'pa-std-1': ['BBD / analog'],
   'nf-tle2s': ['BBD / analog'],
+  'psp-bbdelay': ['BBD / analog'],
 
   'waves-supertap': ['Digital / multi-tap'],
   'psp-608md': ['Digital / multi-tap'],
@@ -165,6 +168,7 @@ export const SUBTYPE_ASSIGNMENTS: Record<string, PluginSubtype[]> = {
   'ni-bite': ['Bitcrush / digital'],
 
   'soundtoys-decapitator': ['Multi-mode'],
+  'fabfilter-saturn-2': ['Multi-mode'],
   'arturia-dist-coldfire': ['Multi-mode'],
   'pa-karacter': ['Multi-mode'],
   'pa-bx-saturator-v2': ['Multi-mode'],
@@ -181,7 +185,9 @@ export const SUBTYPE_ASSIGNMENTS: Record<string, PluginSubtype[]> = {
   'arturia-matrix-12-v': ['Subtractive analog'],
   'arturia-sem-v': ['Subtractive analog'],
   'ni-monark': ['Subtractive analog'],
+  'uad-moog-minimoog': ['Subtractive analog', 'Ladder'],
   'ni-super-8': ['Subtractive analog'],
+  'fabfilter-twin-3': ['Subtractive analog'],
   'korg-polysix-v2': ['Subtractive analog'],
   'pa-knifonium': ['Subtractive analog'],
 

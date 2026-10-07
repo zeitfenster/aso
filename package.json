@@ -4,7 +4,8 @@
   "description": "Personal catalog of licensed audio software and plugins",
   "main": "electron/main.cjs",
   "scripts": {
-    "dev": "concurrently -k \"vite\" \"wait-on http://127.0.0.1:5174 && npm run electron:dev\"",
+    "dev": "concurrently -k \"node scripts/dev-vite.cjs\" \"wait-on http://127.0.0.1:5174 && node scripts/launch-electron.cjs --dev\"",
+    "vite:dev": "node scripts/dev-vite.cjs",
     "build": "vite build",
     "electron:dev": "node scripts/launch-electron.cjs --dev",
     "start": "node scripts/launch-electron.cjs",
@@ -33,7 +34,7 @@
   },
   "build": {
     "appId": "com.nikos.aso",
-    "productName": "Audio Software Overview",
+    "productName": "ASO",
     "copyright": "Copyright © Nikos",
     "directories": {
       "output": "release"
@@ -95,7 +96,7 @@
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "shortcutName": "Audio Software Overview"
+      "shortcutName": "ASO"
     }
   },
   "allowScripts": {

@@ -10,18 +10,48 @@ export default function PreferencesOverlay({
   theme = 'dark',
   onThemeChange,
   onClose,
+  installAvailable = false,
+  installScanning = false,
+  installScannedAt = null,
+  hideWaves = false,
+  hideKontakt = false,
+  onHideWavesChange,
+  onHideKontaktChange,
+  onInstallRescan,
 }: {
   theme?: ThemeName;
   onThemeChange?: (theme: ThemeName) => void;
   onClose: () => void;
+  installAvailable?: boolean;
+  installScanning?: boolean;
+  installScannedAt?: string | null;
+  hideWaves?: boolean;
+  hideKontakt?: boolean;
+  onHideWavesChange?: (value: boolean) => void;
+  onHideKontaktChange?: (value: boolean) => void;
+  onInstallRescan?: () => void;
 }) {
   const [resolution, setResolution] = useState('1600x900');
   const [scale, setScale] = useState(100);
   const [resolutionOptions, setResolutionOptions] = useState<ResolutionOption[]>(
-    [{ id: '1600x900', label: '1600 × 900' }],
+    [
+      { id: '1600x900', label: '1600 × 900' },
+      { id: '1920x1080', label: '1920 × 1080' },
+      { id: '1920x1200', label: '1920 × 1200' },
+      { id: '2560x1440', label: '2560 × 1440' },
+    ],
   );
   const [scaleOptions, setScaleOptions] = useState<ScaleOption[]>([
+    { id: 80, label: '80%' },
+    { id: 90, label: '90%' },
     { id: 100, label: '100%' },
+    { id: 110, label: '110%' },
+    { id: 120, label: '120%' },
+    { id: 125, label: '125%' },
+    { id: 135, label: '135%' },
+    { id: 150, label: '150%' },
+    { id: 175, label: '175%' },
+    { id: 200, label: '200%' },
   ]);
   const [busy, setBusy] = useState(false);
 
@@ -69,7 +99,9 @@ export default function PreferencesOverlay({
         <header className="overlay-header">
           <div>
             <h2 id="preferences-title">Preferences</h2>
-            <p className="overlay-sub">Display size and color theme</p>
+            <p className="overlay-sub">
+              Window size, UI scale, theme, and on-disk plugin check
+            </p>
           </div>
           <button
             type="button"
@@ -85,7 +117,9 @@ export default function PreferencesOverlay({
           <section className="preferences-section">
             <h3>Display</h3>
             <p className="preferences-help">
-              Applies now and is restored automatically on the next launch.
+              Window size and position are remembered when you move or resize.
+              A resolution here sets a size now. Scaling enlarges or shrinks
+              the UI without changing the window.
             </p>
             <div className="preferences-display-grid">
               <label className="preferences-field">
@@ -106,29 +140,34 @@ export default function PreferencesOverlay({
                 </select>
               </label>
               <label className="preferences-field">
-                <Hint text="Window size used when Audio Software Overview opens.">
-                  <span className="preferences-field-label">Resolution</span>
+                <Hint text="Sets the window to this size now. After that, whatever size you resize to is restored on the next launch.">
+                  <span className="preferences-field-label">Window size</span>
                 </Hint>
                 <select
                   className="preferences-select"
                   value={resolution}
                   onChange={(e) => {
                     const next = e.target.value;
+                    if (next === 'custom') return;
                     setResolution(next);
                     void applyAppearance({ resolution: next });
                   }}
-                  aria-label="Window resolution"
+                  aria-label="Window size"
                   disabled={busy}
                 >
                   {resolutionOptions.map((option) => (
-                    <option key={option.id} value={option.id}>
+                    <option
+                      key={option.id}
+                      value={option.id}
+                      disabled={option.id === 'custom'}
+                    >
                       {option.label || option.id}
                     </option>
                   ))}
                 </select>
               </label>
               <label className="preferences-field">
-                <Hint text="Enlarge or shrink text and controls without changing the window size.">
+                <Hint text="Enlarge or shrink text and controls without changing the window size. Also available from View → Zoom.">
                   <span className="preferences-field-label">Scaling</span>
                 </Hint>
                 <select
@@ -150,6 +189,54 @@ export default function PreferencesOverlay({
                 </select>
               </label>
             </div>
+          </section>
+
+          <section className="preferences-section">
+            <h3>On this Mac</h3>
+            <p className="preferences-help">
+              Checks which catalog plugins exist as VST2, VST3, or AU files
+              (and which hosts/apps are in Applications). Does not load
+              plugins. Waves titles are tagged Waves (WaveShell), Kontakt
+              libraries as Kontakt — they are not individual plugin files.
+            </p>
+            <p className="preferences-help">
+              {installScannedAt
+                ? `Last scan ${new Date(installScannedAt).toLocaleString()}.`
+                : installAvailable
+                  ? 'Not scanned yet.'
+                  : 'Available in the ASO desktop app, not the browser preview.'}
+            </p>
+            <label className="preferences-check">
+              <input
+                type="checkbox"
+                checked={hideWaves}
+                onChange={(event) => onHideWavesChange?.(event.target.checked)}
+              />
+              <span>Hide Waves titles from the list</span>
+            </label>
+            <label className="preferences-check">
+              <input
+                type="checkbox"
+                checked={hideKontakt}
+                onChange={(event) => onHideKontaktChange?.(event.target.checked)}
+              />
+              <span>Hide Kontakt libraries from the list</span>
+            </label>
+            <p className="preferences-help">
+              Hidden titles still show if you set On disk to Waves or Kontakt.
+            </p>
+            <button
+              type="button"
+              className="btn ghost"
+              disabled={!installAvailable || installScanning}
+              onClick={() => onInstallRescan?.()}
+            >
+              {installScanning
+                ? 'Scanning…'
+                : installScannedAt
+                  ? 'Rescan plugin folders'
+                  : 'Scan plugin folders'}
+            </button>
           </section>
         </div>
       </div>
