@@ -196,6 +196,8 @@ export const SUBTYPE_ASSIGNMENTS: Record<string, PluginSubtype[]> = {
   'arturia-cz-v': ['Phase distortion'],
   'ni-massive': ['Wavetable'],
   'ni-massive-x': ['Wavetable'],
+  'xfer-serum-1': ['Wavetable'],
+  'xfer-serum-2': ['Multi-mode'],
   'ni-reaktor-prism': ['Additive / modal'],
   'arturia-buchla-easel-v': ['West Coast / modular'],
   'arturia-synthi-v': ['West Coast / modular'],

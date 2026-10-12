@@ -40,6 +40,8 @@ export const INSTEAD_OF: Record<string, string[]> = {
   'uad-moog-minimoog': ['arturia-mini-v', 'ni-monark'],
   'arturia-mini-v': ['uad-moog-minimoog', 'ni-monark'],
   'ni-monark': ['uad-moog-minimoog', 'arturia-mini-v'],
+  'xfer-serum-1': ['xfer-serum-2', 'ni-massive', 'ni-massive-x'],
+  'xfer-serum-2': ['xfer-serum-1', 'ni-massive-x', 'ni-massive'],
 }
 
 const SIMILAR_LIMIT = 5

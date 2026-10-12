@@ -41,6 +41,19 @@ function containsSequence(hay: string[], needle: string[]): boolean {
   return false
 }
 
+function leftoverTokens(hay: string[], needle: string[]): string[] {
+  for (let i = 0; i <= hay.length - needle.length; i += 1) {
+    if (needle.every((token, offset) => hay[i + offset] === token)) {
+      return [...hay.slice(0, i), ...hay.slice(i + needle.length)]
+    }
+  }
+  return hay
+}
+
+function isVersionToken(token: string): boolean {
+  return /^\d+$/.test(token) || /^v\d*$/.test(token)
+}
+
 export function stemMatches(installed: string, candidate: string): boolean {
   const needle = tokens(candidate)
   if (needle.length === 0) return false
@@ -49,7 +62,13 @@ export function stemMatches(installed: string, candidate: string): boolean {
   const joined = needle.join(' ')
   if (hay.join(' ') === joined) return true
   if (joined.length < 3 && needle.length === 1) return false
-  return containsSequence(hay, needle)
+  if (!containsSequence(hay, needle)) return false
+  const leftover = leftoverTokens(hay, needle)
+  const extraVersion = leftover.some(isVersionToken)
+  const needleHasVersion = needle.some(isVersionToken)
+  // "Serum" must not count as installed when the file is "Serum 2".
+  if (extraVersion && !needleHasVersion) return false
+  return true
 }
 
 function listHasCandidate(names: string[], candidates: string[]): boolean {

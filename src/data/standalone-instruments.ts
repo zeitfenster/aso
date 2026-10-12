@@ -269,4 +269,50 @@ export const standaloneInstruments: CatalogEntry[] = [
     ],
     tags: ['synth', 'analog', 'fabfilter', 'subtractive'],
   },
+  {
+    id: 'xfer-serum-1',
+    name: 'Serum 1',
+    vendor: 'Xfer Records',
+    kind: 'plugin',
+    types: ['Synth'],
+    collections: [],
+    summary:
+      'Wavetable synthesizer with two visual wavetable oscillators plus sub and noise, unison, warp modes, a drag-and-drop modulation matrix, and a 10-slot FX rack. The disk plugin is named Serum; it coexists with Serum 2.',
+    sonicCharacter:
+      'Bright, precise digital wavetables with huge unison stacks—from glassy plucks and supersaws to aggressive bass-music growls. The visual editor makes movement obvious; FX (hyper, distortion, compression) push presets toward mix-ready EDM sheen.',
+    bestFor:
+      'Modern electronic basses, leads, plucks, and designed wavetable patches when you want visual, real-time wavetable control.',
+    useCases: [
+      'Unison wavetable bass with filter envelope and a little warp/FM.',
+      'Supersaw or pluck leads for dance and pop hooks.',
+      'Custom wavetable morphs modulated from an LFO or envelope.',
+    ],
+    notes:
+      'Installed as Serum (not “Serum 1”). Separate plugin from Serum 2; both can live on the same machine. Serum 1 owners get Serum 2 as a free upgrade from Xfer.',
+    tags: ['synth', 'wavetable', 'xfer', 'electronic'],
+    installHints: ['Serum'],
+  },
+  {
+    id: 'xfer-serum-2',
+    name: 'Serum 2',
+    vendor: 'Xfer Records',
+    kind: 'plugin',
+    types: ['Synth'],
+    collections: [],
+    summary:
+      'Hybrid successor to Serum: three oscillators, each Wavetable, Multisample, Sample, Granular, or Spectral, plus deeper modulation, clip launcher / arpeggiator, and a more flexible FX rack. Loads Serum 1 presets; installs as its own plugin.',
+    sonicCharacter:
+      'Still Serum’s visual wavetable core, now able to sit beside sampled instruments, granular textures, and spectral resynthesis in one patch—from classic digital stacks to organic hybrid beds.',
+    bestFor:
+      'Wavetable sound design plus sample/granular/spectral layers when you want Serum’s workflow on a broader hybrid engine.',
+    useCases: [
+      'Rebuild a Serum 1 bass and add a granular or spectral layer.',
+      'Multisample keys with a wavetable motion layer on another oscillator.',
+      'Performance macros across three oscillators and the expanded FX rack.',
+    ],
+    notes:
+      'Separate plugin from Serum 1 (disk name Serum 2 / Serum2). Free upgrade for Serum 1 owners; both can remain installed.',
+    tags: ['synth', 'wavetable', 'hybrid', 'xfer', 'electronic'],
+    installHints: ['Serum2'],
+  },
 ]
